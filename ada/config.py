@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -33,6 +34,9 @@ def _strict_int(value: Any, name: str, *, minimum: int = 1) -> int:
 
 
 def _check_keys(data: Mapping[str, Any], allowed: set[str], name: str) -> None:
+    non_string = [key for key in data if not isinstance(key, str)]
+    if non_string:
+        raise ConfigurationError(f"All {name} keys must be strings")
     unknown = sorted(set(data) - allowed)
     if unknown:
         raise ConfigurationError(f"Unknown {name} key(s): {', '.join(unknown)}")
@@ -132,13 +136,13 @@ class ADAConfig:
         _check_keys(runtime_raw, {"backend", "device"}, "runtime")
         backend = runtime_raw.get("backend")
         device = runtime_raw.get("device")
-        if backend not in {"pytorch"}:
+        if not isinstance(backend, str) or backend != "pytorch":
             raise ConfigurationError(
                 "runtime.backend must be 'pytorch' in this implementation"
             )
         if not isinstance(device, str) or not device.strip():
             raise ConfigurationError("runtime.device must be a non-empty string")
-        if device not in {"cpu", "cuda"} and not device.startswith("cuda:"):
+        if device not in {"cpu", "cuda"} and re.fullmatch(r"cuda:[0-9]+", device) is None:
             raise ConfigurationError(
                 "runtime.device must be 'cpu', 'cuda', or an explicit 'cuda:N'"
             )
