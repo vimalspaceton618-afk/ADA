@@ -1,0 +1,136 @@
+# ADA v4.5 research target profile
+# Source: ADA_v4.5_Research_Paper-1.docx, Appendix A and Sections 3, 9C, 10.
+# PAPER-DERIVED RESEARCH TARGET, not a validated executable profile.
+# An implementation must declare support for every component before use.
+
+profile:
+  id: ada-v4.5-research-target
+  status: research_target
+  source_document: ADA_v4.5_Research_Paper-1.docx
+  source_version: "July 2026 / Version 1.0"
+  execution_allowed: false
+  require_implementation_compatibility: true
+
+model:
+  architecture_id: ada-v4.5-hybrid
+  vocab_size: 50272
+  d_model: 2048
+  n_layers: 32
+  max_seq_len: 4096
+  topology:
+    cycle: [mamba2_mod, mamba2_mod, continuous_memory, agent_attention]
+    repeats: 8
+
+mamba2:
+  d_state: 128
+  d_conv: 4
+  expand: 2
+  n_heads: 64
+  dt_min: 0.001
+  dt_max: 0.1
+
+mixture_of_depths:
+  enabled: true
+  capacity: 0.5
+  apply_to: [mamba2_mod]
+  preserve_original_position_order: true
+
+attention:
+  type: dynamic_sparse_gqa
+  n_heads: 16
+  n_kv_heads: 4
+  rope_theta: 500000
+  sparse_keep_fraction: 0.75
+  causal: true
+
+moe:
+  type: fine_grained_swiglu
+  n_experts: 64
+  top_k: 6
+  d_ff: 1408
+  load_balance: online_bias_correction
+  bias_lr: 0.001
+  auxiliary_load_balance_loss: false
+
+external_memory:
+  type: differentiable_read_only_key_value
+  slots: 2048
+  d_mem: 256
+  temperature: 10.0
+
+multi_token_prediction:
+  enabled: true
+  auxiliary_heads: 4
+  offsets: [2, 3, 4, 5]
+  loss_coefficient: 0.3
+  training_only: true
+
+initialization:
+  linear_weight_distribution: truncated_normal
+  mean: 0.0
+  std: 0.02
+  lower_bound: -0.04
+  upper_bound: 0.04
+  bias: zeros
+  rmsnorm_weight: ones
+  embedding_std: 0.02
+  ssm_A_log: "log(head_index + 1)"
+  ssm_dt_initial_range: [0.001, 0.1]
+  ssm_skip_D: 1.0
+
+precision:
+  activation: bfloat16
+  optimizer_state: float32
+  ssm_scan_internal: float32
+  rmsnorm_internal: float32
+  softmax_internal: float32
+  A_log: float32
+  expert_bias: float32
+
+training:
+  optimizer: adamw
+  beta1: 0.9
+  beta2: 0.95
+  epsilon: 1.0e-8
+  weight_decay: 0.1
+  exclude_weight_decay: [bias, rmsnorm_weight, embedding_weight]
+  learning_rate_peak: 3.0e-4
+  learning_rate_min: 3.0e-5
+  warmup_steps: 2000
+  total_steps_reference: 100000
+  gradient_clip_norm: 1.0
+  gradient_checkpointing_granularity: four_layer_cycle
+
+data:
+  corpus_reference: [FineWeb-Edu, StarCoder]
+  code_mix_fraction: 0.10
+  active_parameter_token_ratio_reference: 20
+  token_budget_must_be_recomputed: true
+  require_immutable_manifest: true
+  require_license_and_provenance: true
+
+runtime:
+  backend: implementation_selected
+  device: explicit_user_or_scheduler_selection
+  no_implicit_fallback: true
+  no_runtime_dependency_install: true
+
+resource_policy:
+  require_measured_or_conservative_memory_estimate: true
+  require_safety_reserve: true
+  distributed_strategy: profile_and_scale_dependent
+  never_infer_performance_from_peak_theoretical_flops: true
+
+validation:
+  require_causal_tests: true
+  require_scan_reference_equivalence: true
+  require_gradient_checks: true
+  require_checkpoint_compatibility: true
+  require_tokenizer_vocabulary_match: true
+  require_baseline_and_ablation_plan: true
+  empirical_hardware_benchmarks: pending
+
+notes:
+  - "The paper contains internal parameter-budget figures that should be independently reconciled before use."
+  - "Notebook FNY_ADA and TensorNet linear-attention experiments are not the same implementation as this v4.5 target."
+  - "This profile intentionally cannot launch training until an executable implementation profile is produced."
