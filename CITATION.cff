@@ -1,0 +1,6 @@
+cff-version: 1.2.0
+message: "If you use or refer to ADA, please cite this repository."
+title: "ADA"
+type: software
+authors:
+  - name: "ADA contributors"
