@@ -13,7 +13,7 @@ A program includes identity/version, base artifact, objective, task distribution
 Illustrative YAML (schema draft; not executable configuration):
 
 ~~~yaml
-api_version: wspi.ada/v0
+api_version: wpl.ada/v0
 program:
   id: adapter-composition-study-001
   version: 1
