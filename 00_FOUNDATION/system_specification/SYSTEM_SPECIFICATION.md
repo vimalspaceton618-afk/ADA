@@ -90,13 +90,21 @@ The default architecture separates model weights from external memory. Memory ca
 
 Any weight adaptation must occur in a controlled pipeline with data review, evaluation, approval, versioning, and rollback. No unrestricted self-modification is part of this baseline.
 
-## 8. Security and control plane
+## 8. Weight-space programming and controlled self-evolution
+
+WSPPI is a separately governed subsystem for inspecting and transforming model parameters. It provides a declarative Weight Program Language (WPL), typed compiler, artifact registry, isolated transformation workers, candidate evaluation, and a promotion controller. It supports researcher-authored programs and model-proposed self-evolution experiments under the same permission boundaries.
+
+The inference runtime reads only approved immutable artifacts. Candidate transformations never edit production weights in place. Model-generated proposals cannot execute arbitrary code, grant permissions, disable evaluations, access release credentials, or approve their own promotion. Promotion requires integrity, structural, capability, protected-regression, safety, provenance, and operational checks plus explicit human approval. Every release must support rollback.
+
+The initial operation roadmap prioritizes artifact inspection, integrity verification, bounded parameter deltas, adapter application/composition, and evaluation. Checkpoint merging, task-vector methods, reparameterization, and autonomous proposal generation remain research work until independently validated.
+
+## 9. Security and control plane
 
 The control plane owns identity, authorization, quotas, tool registry, approval gates, traceability, and emergency stop. It must be logically separate from model-generated plans. Model text cannot create permissions or alter policy.
 
 Tool execution should use isolated processes or sandboxes, scoped credentials, egress restrictions where appropriate, and strict input/output validation.
 
-## 9. Evaluation gates
+## 10. Evaluation gates
 
 | Gate | Required evidence |
 |---|---|
@@ -110,14 +118,14 @@ Tool execution should use isolated processes or sandboxes, scoped credentials, e
 
 A failed gate blocks progression until the issue is resolved or the scope is explicitly changed.
 
-## 10. Hardware and framework strategy
+## 11. Hardware and framework strategy
 
 Architecture research should be portable across PyTorch and JAX where practical, while acknowledging that backend-specific kernels and distributed execution differ. A correctness-first implementation should precede custom kernels. Hardware selection must follow workload profiling and realistic budget analysis; no single accelerator type is assumed.
 
-## 11. Release definition
+## 12. Release definition
 
 An ADA model release must identify the artifact, intended use, excluded use, architecture version, tokenizer, data documentation, evaluations, limitations, license/terms, hardware requirements, and known risks. A demo is not a release. A checkpoint is not a validated product.
 
-## 12. Open specifications
+## 13. Open specifications
 
 Before implementation freeze, define exact model dimensions; state-space recurrence; attention positions and sparsity; MoE routing and capacity; normalization and residual topology; tokenizer; training objective; optimizer and schedule; data composition; inference cache; specialist protocol; and safety policy. These must be version-controlled and tied to testable configurations.

@@ -50,3 +50,14 @@ Canonical meanings for terms used in specifications, code, experiments, and repo
 - Distinguish a **research hypothesis** from a **decision** and an implemented feature.
 - Use exact benchmark names and versions; do not use informal labels as evidence.
 - When citing another architecture, identify the source and explain which parts are independently implemented, adapted, or merely conceptually related.
+
+| WSPPI | Weight-Space Programming and Parameter Intelligence; ADA research subsystem for parameter-space operations and controlled evolution |
+| WPL | Weight Program Language; constrained declarative format for specifying approved parameter transformations |
+| WIR | Weight Intermediate Representation; typed compiler output for validated weight programs |
+| Weight program | Declarative specification of parameter operations, selectors, preconditions, constraints, and evaluations |
+| Weight-space programming | Explicit manipulation or composition of model parameters and parameter deltas under a defined program |
+| Controlled self-evolution | Evidence-driven loop in which ADA proposes candidate updates that are isolated, evaluated, reviewed, and optionally promoted |
+| Candidate artifact | Immutable result of a transformation that has not been approved for release |
+| Promotion | Governed change of the approved model artifact reference; not an in-place weight mutation |
+| Task vector | Parameter-space direction or delta associated with a task or behavioral change; usefulness and compatibility require empirical validation |
+| Adapter composition | Combining compatible parameter-efficient updates under explicitly defined composition semantics |

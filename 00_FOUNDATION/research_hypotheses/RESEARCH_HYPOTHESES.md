@@ -90,3 +90,18 @@ Every experiment record MUST include:
 ## Research queue
 
 Priority order should be: correctness reference implementation; small-scale ablation; stability; reproducibility; efficiency measurement; then scaling. Do not begin expensive scaling runs until the corresponding small-scale experiment is informative and stable.
+
+
+## WSPPI hypotheses — weight-space programming and controlled evolution
+
+The WSPPI research register adds seven falsifiable hypotheses:
+
+- **H-WSP-01:** bounded parameter deltas can adapt a task while retaining protected general capabilities.
+- **H-WSP-02:** compatible adapters can be composed with lower storage or deployment cost and acceptable interference.
+- **H-WSP-03:** compatible checkpoints may be interpolated or merged to improve a declared metric.
+- **H-WSP-04:** constrained automated proposals can outperform random, heuristic, or human baselines on held-out objectives.
+- **H-WSP-05:** parameter statistics and behavioral probes may predict some harmful transformations before full evaluation.
+- **H-WSP-06:** bounded iterative propose-test-select loops may outperform one-shot updates at equal budgets.
+- **H-WSP-07:** some failures are better addressed through retrieval, tools, data, or orchestration than weight changes.
+
+These are hypotheses, not accepted findings. Protocols, falsifiers, metrics, baselines, and staged exit criteria are defined in [WSPPI Research Specification](../weight_space_programming/WSPPI_RESEARCH_SPECIFICATION.md).

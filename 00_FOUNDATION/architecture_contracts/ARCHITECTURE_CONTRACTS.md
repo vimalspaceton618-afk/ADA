@@ -135,3 +135,20 @@ Components SHOULD use structured errors with stable codes, human-readable explan
 At minimum, test schema validation, tensor shapes, causality, padding, cache reset, numerical reference equivalence, expert overflow, router abstention, tool authorization, timeout/cancellation, provenance retention, deletion, and version incompatibility.
 
 A component is not contract-compliant merely because a happy-path demo works.
+
+
+## 14. Weight-space programming contract
+
+WSPPI is a separate parameter-engineering subsystem. Its interfaces MUST preserve these invariants:
+
+- Production model artifacts are immutable during ordinary inference.
+- Every transformation operates on a digest-verified source artifact and writes a new candidate artifact.
+- Weight programs use a typed, versioned declarative operation set; arbitrary model-generated code is not executable.
+- Tensor selectors resolve against a versioned model manifest and report exact matched tensors.
+- Transformation workers have no production credentials, signing keys, or promotion permission.
+- Every candidate records source digest, operation versions, parameters, code version, environment, and output digest.
+- Candidate evaluation returns pass, fail, or inconclusive; missing evidence is never a pass.
+- Promotion requires independent policy checks and explicit authorized human approval.
+- Rollback restores a previously approved immutable artifact reference.
+
+The detailed subsystem specification is in [WSPPI](../weight_space_programming/README.md).

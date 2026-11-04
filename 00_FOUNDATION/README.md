@@ -17,6 +17,7 @@ This directory is the constitutional and technical starting point for ADA. It de
 | Contracts | [Architecture contracts](architecture_contracts/ARCHITECTURE_CONTRACTS.md) | Interfaces, invariants, compatibility, and failure behavior |
 | Specification | [System specification](system_specification/SYSTEM_SPECIFICATION.md) | System-level view and proposed architecture boundaries |
 | Language | [Terminology](terminology/TERMINOLOGY.md) | Canonical terms and meanings |
+| Weight-space intelligence | [WSPPI](weight_space_programming/README.md) | Parameter-space programming and controlled self-evolution |
 
 ## Decision hierarchy
 
