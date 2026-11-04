@@ -108,3 +108,22 @@ def test_research_profile_is_not_executable() -> None:
     )
     with pytest.raises(ConfigurationError, match="non-executable"):
         ADAConfig.from_yaml(profile)
+
+@pytest.mark.parametrize("device", ["cuda:", "cuda:abc", "cuda:-1", "cuda:0x1", " cuda:0 "])
+def test_malformed_cuda_devices_are_rejected(valid_config: dict, device: str) -> None:
+    valid_config["runtime"]["device"] = device
+    with pytest.raises(ConfigurationError, match="runtime.device"):
+        ADAConfig.from_mapping(valid_config)
+
+
+@pytest.mark.parametrize("backend", [None, {}, [], 1, True])
+def test_non_string_backend_is_rejected(valid_config: dict, backend: object) -> None:
+    valid_config["runtime"]["backend"] = backend
+    with pytest.raises(ConfigurationError, match="runtime.backend"):
+        ADAConfig.from_mapping(valid_config)
+
+
+def test_non_string_configuration_keys_are_rejected(valid_config: dict) -> None:
+    valid_config["model"][1] = "unexpected"
+    with pytest.raises(ConfigurationError, match="keys must be strings"):
+        ADAConfig.from_mapping(valid_config)
