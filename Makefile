@@ -1,5 +1,8 @@
-.PHONY: help
+.PHONY: help test
 
 help:
-	@echo "ADA repository scaffold"
-	@echo "No build or test targets are defined yet."
+	@echo "ADA research scaffold"
+	@echo "  make test  Run the configuration unit tests"
+
+test:
+	python -m pytest -q
