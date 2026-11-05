@@ -43,6 +43,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
 
     # Optional pretrained image feature path (checkpoint must be cached locally).
     visual = SigLIPVisionAdapter.from_pretrained(
+        "./models/siglip-base-patch16-224",
         local_files_only=True,
         revision="main",  # Pin a Hub commit SHA for reproducible deployments.
     )
