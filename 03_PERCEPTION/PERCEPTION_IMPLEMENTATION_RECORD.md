@@ -71,3 +71,35 @@ Files were written individually to GitHub main. No basic test suite or local exe
 ## Non-goals of this phase
 
 No claim of human-level perception, semantic comprehension, visual accuracy, speech recognition quality, video reasoning, learned multimodal fusion, production throughput, or benchmark superiority.
+
+
+## Visual Perception v1 — pretrained SigLIP adapter
+
+Implemented after the initial modality-agnostic contracts:
+
+- visual_perception/preprocessing.py — in-memory JPEG/PNG/WebP validation, MIME-vs-file-format verification, EXIF orientation, RGB conversion, decompression-bomb warning handling, and configurable pixel ceiling.
+- visual_perception/siglip.py — optional Google SigLIP Base adapter, safe local checkpoint loading, image embedding extraction, and caller-scoped zero-shot image/text matching scores.
+- visual_perception/__init__.py — public exports for the adapter and preprocessing contracts.
+- pyproject.toml — optional perception-vision dependency group (PyTorch, Transformers, Pillow, safetensors).
+- ada/perception facade — exports the visual adapter dynamically from the canonical package.
+- README.md — loading, usage, model provenance, constraints and limitations.
+
+### Model provenance
+
+- Repository: https://huggingface.co/google/siglip-base-patch16-224
+- Model architecture/task: SigLIP Base ViT-B/16; image-text representation and zero-shot image classification.
+- Parameter count reported by Hugging Face: approximately 203.2M.
+- Hub repository license metadata: Apache-2.0.
+- Training data statement in model card: English image-text pairs from WebLI.
+- Model revision: configurable; resolved checkpoint revision is stored in each observation. Use a fixed commit SHA for reproducible deployments.
+- Weight handling: no model weights are copied into ADA. The adapter uses safetensors, disables remote custom code, and defaults to local_files_only=True.
+
+### Output semantics and limits
+
+The adapter returns an L2-normalized image feature vector with model ID/revision, image dimensions, source input ID, and SHA-256 provenance. Optional candidate_labels metadata requests SigLIP image/text matching scores. Sigmoid-transformed matching scores are not calibrated probabilities and depend on the candidate set.
+
+This adapter does not generate captions, OCR text, bounding boxes, object detections, segmentation masks, or spatial grounding. Video frame sampling and temporal understanding are not implemented. Audio remains an adapter contract only.
+
+### Verification status
+
+The implementation has been committed directly to main. No model checkpoint was downloaded, no GPU/CPU inference was executed, and no tests were run during this source-writing pass. The adapter is implemented in code, but its actual runtime behavior remains unverified until it is exercised with the optional dependencies and a locally available checkpoint.
