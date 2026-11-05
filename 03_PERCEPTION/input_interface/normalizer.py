@@ -47,7 +47,6 @@ class InputNormalizer:
                 raise InputValidationError("TEXT input exceeds configured character limit")
             if "\x00" in content:
                 raise InputValidationError("TEXT input contains a null character")
-            content = content.replace("\r\n", "\n").replace("\r", "\n")
 
         elif item.modality in {Modality.IMAGE, Modality.AUDIO, Modality.VIDEO}:
             if not isinstance(content, bytes):
