@@ -162,7 +162,7 @@ Implemented as an optional video path:
 
 ### Input, output and boundaries
 
-The adapter accepts MP4, QuickTime, Matroska, WebM and MPEG MIME declarations. Defaults are 50 MiB input, 600 seconds duration, 12 frames, 5-second sample interval and 40 megapixels per frame. Each sampled frame is encoded in memory as JPEG and passed to the injected image adapter. The returned PARTIAL observation includes frame indices, presentation timestamps in seconds, dimensions, embeddings, and model identity/revision. No file is written and no model weights are duplicated.
+The adapter accepts MP4, QuickTime, Matroska, WebM and MPEG MIME declarations. Defaults are 50 MiB input, 600 seconds duration, 12 selected frames, 100,000 decoded frames, and 40 megapixels per frame. The 5-second sample interval is a minimum and expands for long clips with a known duration so the selected frames span the clip. Each sampled frame is encoded in memory as JPEG and passed to the injected image adapter. The returned PARTIAL observation includes frame indices, presentation timestamps in seconds, dimensions, embeddings, and model identity/revision. No file is written and no model weights are duplicated.
 
 The audio stream is ignored. Sparse frame embeddings do not constitute temporal understanding, action recognition, object tracking, motion estimation, or video captioning. Short events between sample points can be missed. Audio perception requires a separately supplied audio input and explicitly registered adapter.
 
