@@ -14,10 +14,11 @@ _validation = import_module("03_PERCEPTION.perception_validation")
 _patterns = import_module("03_PERCEPTION.pattern_detection")
 _visual = import_module("03_PERCEPTION.visual_perception")
 _audio = import_module("03_PERCEPTION.audio_perception")
+_video = import_module("03_PERCEPTION.video_perception")
 _entities = import_module("03_PERCEPTION.entity_recognition")
 _events = import_module("03_PERCEPTION.event_detection")
 
-for _module in (_input, _text, _structured, _fusion, _validation, _patterns, _visual, _audio, _entities, _events):
+for _module in (_input, _text, _structured, _fusion, _validation, _patterns, _visual, _audio, _video, _entities, _events):
     for _name in _module.__all__:
         globals()[_name] = getattr(_module, _name)
 
