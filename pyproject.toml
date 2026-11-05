@@ -16,6 +16,7 @@ dependencies = []
 dev = ["pytest>=8"]
 yaml = ["PyYAML>=6"]
 neural = ["torch>=2.2"]
+perception-vision = ["torch>=2.2", "transformers>=4.44", "Pillow>=10", "safetensors>=0.4"]
 
 [tool.setuptools.packages.find]
 include = ["ada*", "02_CORE_RUNTIME*", "03_PERCEPTION*"]
