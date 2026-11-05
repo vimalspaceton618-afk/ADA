@@ -16,7 +16,7 @@ The subsystem must distinguish source observations from inferred semantics. It d
 - visual_perception/adapter.py — visual adapter protocol and capability declarations.
 - visual_perception/preprocessing.py — safe in-memory JPEG/PNG/WebP decoding, MIME verification, EXIF orientation and pixel limits.
 - visual_perception/siglip.py — optional pretrained SigLIP image embedding and caller-scoped zero-shot label scoring.
-- audio_perception/adapter.py — audio model adapter protocol and capability declarations.
+- audio_perception/adapter.py — audio model adapter protocol and capability declarations.\n- video_perception/adapter.py — explicit video adapter capability contract.\n- video_perception/preprocessing.py — bounded PyAV decoding, timestamp-based sparse frame sampling, and duration/frame/pixel/byte limits.\n- video_perception/siglip_video.py — per-frame SigLIP embeddings with video and sampled-frame provenance.
 - sensory_fusion/fuser.py — grouping by caller-provided correlation ID without semantic fusion claims.
 - pattern_detection/detector.py — repeated lexical n-gram baseline.
 - entity_recognition/recognizer.py — source-grounded entity mention contract; no heuristic NER implementation enabled.
@@ -147,3 +147,31 @@ No speaker diarization, speaker identity, voice biometrics, acoustic event class
 ### Verification status
 
 Source files and tests have been committed directly to main. No Whisper checkpoint was downloaded, no real audio was transcribed, and no test suite or benchmark was run during this source-writing pass. The fake-pipeline tests are present but remain unexecuted in this pass.
+
+
+## Video Perception v1 — bounded sparse SigLIP frame adapter
+
+Implemented as an optional video path:
+- video_perception/preprocessing.py — PyAV container decoding, accepted MIME declarations, timestamp-preserving sparse sampling, and configurable byte/duration/frame/pixel limits. Input containers are closed on success and failure.
+- video_perception/siglip_video.py — reuses a caller-supplied SigLIP image adapter to extract an independent normalized embedding for each selected frame.
+- video_perception/adapter.py — declares frame sampling and embedding support while explicitly disabling temporal reasoning and audio extraction.
+- video_perception/__init__.py and 03_PERCEPTION/__init__.py — canonical exports.
+- ada/perception/__init__.py — stable import facade.
+- tests/test_video_perception.py — fake-container and fake-vision-adapter tests for timestamps, resource caps, provenance, cleanup and capability boundaries.
+- pyproject.toml — optional perception-video dependencies; NumPy explicitly added to development and audio extras.
+
+### Input, output and boundaries
+
+The adapter accepts MP4, QuickTime, Matroska, WebM and MPEG MIME declarations. Defaults are 50 MiB input, 600 seconds duration, 12 frames, 5-second sample interval and 40 megapixels per frame. Each sampled frame is encoded in memory as JPEG and passed to the injected image adapter. The returned PARTIAL observation includes frame indices, presentation timestamps in seconds, dimensions, embeddings, and model identity/revision. No file is written and no model weights are duplicated.
+
+The audio stream is ignored. Sparse frame embeddings do not constitute temporal understanding, action recognition, object tracking, motion estimation, or video captioning. Short events between sample points can be missed. Audio perception requires a separately supplied audio input and explicitly registered adapter.
+
+### Model and decoder provenance
+
+- Image encoder: reuses the existing optional Google SigLIP Base adapter and selected local/checkpoint revision; no new model checkpoint is introduced.
+- Container decoder: PyAV Python bindings for FFmpeg; installed only via the optional perception-video extra.
+- No PyAV binary or video model weights are vendored in ADA.
+
+### Verification status
+
+The test suite includes deterministic fake decoder/fake encoder coverage. Actual PyAV decoding, real SigLIP checkpoint inference, and video performance have not been exercised by those tests. GitHub Actions is the source of truth for the integration test result.
