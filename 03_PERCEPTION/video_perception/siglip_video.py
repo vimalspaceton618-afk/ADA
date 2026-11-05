@@ -64,9 +64,10 @@ class SigLIPVideoAdapter:
             raise ImportError(
                 "Video frame encoding requires Pillow; install perception-vision"
             ) from exc
+        rgb_image = image.convert("RGB")
         try:
             buffer = BytesIO()
-            image.convert("RGB").save(
+            rgb_image.save(
                 buffer,
                 format="JPEG",
                 quality=90,
@@ -74,9 +75,10 @@ class SigLIPVideoAdapter:
             )
             encoded = buffer.getvalue()
         finally:
-            close = getattr(image, "close", None)
-            if callable(close):
-                close()
+            for candidate in (rgb_image, image):
+                close = getattr(candidate, "close", None)
+                if callable(close):
+                    close()
         if not encoded:
             raise VideoDecodeError("video frame encoder produced empty image bytes")
         return encoded
