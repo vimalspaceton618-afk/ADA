@@ -13,7 +13,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
 | Text perception | text_perception/processor.py | Exact text preservation and deterministic surface statistics | Baseline implemented |
 | Structured perception | structured_perception/processor.py | JSON-compatible structure and shape inspection | Baseline implemented |
 | Visual perception | visual_perception/adapter.py, visual_perception/siglip.py | Image adapter contract and pretrained SigLIP feature extraction | SigLIP image inference implemented; OCR/object detection deferred |
-| Audio perception | audio_perception/adapter.py | ASR/acoustic model adapter contract | Interface only |
+| Audio perception | audio_perception/adapter.py, audio_perception/preprocessing.py, audio_perception/whisper.py | Audio adapter, WAV/FLAC decoding and Whisper ASR | Transcription implemented; diarization/event detection deferred |
 | Sensory fusion | sensory_fusion/fuser.py | Group observations by explicit correlation ID | Deterministic grouping only |
 | Pattern detection | pattern_detection/detector.py | Repeated token n-gram detection | Surface baseline |
 | Entity recognition | entity_recognition/recognizer.py | Source-grounded entity extraction contract | Interface only |
@@ -29,6 +29,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
         PerceptionEngine,
         PerceptionValidator,
         SigLIPVisionAdapter,
+        WhisperAudioAdapter,
     )
 
     engine = PerceptionEngine()
@@ -102,11 +103,42 @@ Load the model from that directory:
 
 from_pretrained() defaults to local-only loading, uses safetensors, and sets trust_remote_code=False. Network downloads are disabled unless the caller explicitly sets local_files_only=False. For reproducible deployments, use a specific Hub commit SHA instead of the mutable main revision. The adapter records the resolved model revision in each observation.
 
+## Audio model integration: Whisper Base
+
+ADA includes an optional multilingual ASR adapter for OpenAI Whisper Base. Hugging Face reports approximately 72.6M parameters and Apache-2.0 model-repository licensing. The multilingual checkpoint supports speech recognition in the spoken language and speech translation; this adapter deliberately exposes transcription only. See the [Whisper Base model card](https://huggingface.co/openai/whisper-base) and [Whisper model documentation](https://github.com/openai/whisper).
+
+Install optional dependencies:
+
+    python -m pip install -e ".[perception-audio]"
+
+Download the checkpoint locally (the safetensors weights are approximately 290 MB):
+
+    hf download openai/whisper-base --local-dir ./models/whisper-base
+
+Load and register it:
+
+    from ada.perception import WhisperAudioAdapter
+
+    audio = WhisperAudioAdapter.from_pretrained(
+        "./models/whisper-base",
+        local_files_only=True,
+        revision="main",
+    )
+    engine.register_adapter(audio)
+
+from_pretrained() defaults to local-only loading, uses safetensors, disables remote custom code, and uses CPU by default when CUDA is unavailable. Set local_files_only=False only to explicitly permit model downloads. Pin a Hub commit SHA for reproducible deployments.
+
+The current decoder accepts WAV and FLAC bytes with a matching MIME content_type. It downmixes channels to mono, resamples to 16 kHz, rejects silent/non-finite audio, and enforces a configurable maximum duration (30 minutes by default). MP3/AAC and video containers are not accepted by this adapter.
+
+Whisper returns a transcript in Observation.extracted_text. When the Transformers pipeline returns chunk boundaries, the adapter preserves segment-level timestamps in seconds relative to the supplied audio clip. An optional metadata.language value conditions the transcription language; it is not an automatically detected language field. Transcripts may contain recognition errors and must be verified for consequential uses.
+
+This adapter does not implement speaker diarization, word-level forced alignment, voice identification, acoustic event classification, or emotion recognition. Audio embedding extraction is also not exposed by this ASR adapter.
+
 The image input must contain JPEG, PNG, or WebP bytes and a matching MIME content_type. EXIF orientation is applied, and the decoder enforces a 40-megapixel default cap before model preprocessing. The SigLIP processor performs model-specific resize/rescale/normalization.
 
 Every successful image observation contains a normalized image embedding, source digest, model ID/revision, and decoded image dimensions. Supplying metadata.candidate_labels requests caller-scoped image/text sigmoid scores. Those scores are not calibrated probabilities, and their ranking depends on the supplied candidate set. The adapter does not produce captions, OCR text, bounding boxes, object detections, or spatial grounding.
 
-No model weights are committed to this repository. Audio and video interfaces remain contracts only; no ASR, diarization, audio event model, or video temporal encoder is bundled. Future adapters must document model identity, version, preprocessing, licenses, confidence semantics, timestamp conventions, and source offsets.
+No model weights are committed to this repository. Whisper ASR is optional and must be explicitly registered. Video temporal encoding, diarization and acoustic event models are not bundled. Future adapters must document model identity, version, preprocessing, licenses, confidence semantics, timestamp conventions, and source offsets.
 
 ## Downstream interfaces
 
