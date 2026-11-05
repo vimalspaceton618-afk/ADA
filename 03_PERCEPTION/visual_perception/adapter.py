@@ -19,6 +19,8 @@ class VisualAdapterCapabilities:
     supports_ocr: bool = False
     supports_object_detection: bool = False
     supports_spatial_grounding: bool = False
+    supports_image_embeddings: bool = False
+    supports_zero_shot_label_scoring: bool = False
 
 
 class VisualPerceptionAdapter(Protocol):
