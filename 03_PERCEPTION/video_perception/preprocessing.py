@@ -41,6 +41,8 @@ class DecodedVideo:
     frames: tuple[SampledVideoFrame, ...]
     duration_seconds: float | None
     container_format: str | None
+    decoded_frame_count: int
+    effective_sample_interval_seconds: float
 
 
 def _positive_finite_number(name: str, value: float) -> float:
@@ -90,6 +92,7 @@ def decode_video(
     max_duration_seconds: float = 600.0,
     max_video_bytes: int = 50 * 1024 * 1024,
     max_frame_pixels: int = 40_000_000,
+    max_decoded_frames: int = 100_000,
     container_opener: Callable[..., Any] | None = None,
 ) -> DecodedVideo:
     """Decode and sparsely sample video frames under explicit resource caps.
@@ -104,6 +107,7 @@ def decode_video(
         ("max_frames", max_frames),
         ("max_video_bytes", max_video_bytes),
         ("max_frame_pixels", max_frame_pixels),
+        ("max_decoded_frames", max_decoded_frames),
     ):
         if type(value) is not int or value < 1:
             raise ValueError(f"{name} must be a positive integer")
@@ -146,12 +150,23 @@ def decode_video(
             )
 
         selected: list[SampledVideoFrame] = []
+        # Treat the configured interval as a minimum. For long, known-duration
+        # clips, widen the interval so the bounded sample spans the whole clip.
+        effective_interval = interval
+        if known_duration is not None and max_frames > 1:
+            effective_interval = max(interval, known_duration / max_frames)
         next_sample_at = 0.0
         previous_timestamp = -1.0
+        decoded_frame_count = 0
         container_format_obj = getattr(container, "format", None)
         format_name = getattr(container_format_obj, "name", None)
 
         for frame_index, frame in enumerate(container.decode(video=stream.index)):
+            decoded_frame_count = frame_index + 1
+            if decoded_frame_count > max_decoded_frames:
+                raise VideoDecodeError(
+                    f"decoded frame count exceeds limit ({max_decoded_frames})"
+                )
             width = int(getattr(frame, "width", 0))
             height = int(getattr(frame, "height", 0))
             if width < 1 or height < 1:
@@ -197,6 +212,8 @@ def decode_video(
             frames=tuple(selected),
             duration_seconds=known_duration,
             container_format=format_name,
+            decoded_frame_count=decoded_frame_count,
+            effective_sample_interval_seconds=effective_interval,
         )
     except VideoDecodeError:
         raise
