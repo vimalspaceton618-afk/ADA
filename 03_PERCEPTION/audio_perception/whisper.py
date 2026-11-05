@@ -47,6 +47,7 @@ class WhisperAudioAdapter:
         supports_speaker_diarization=False,
         supports_audio_event_detection=False,
         supports_timestamps=True,
+        supports_language_conditioning=True,
     )
 
     def __init__(
