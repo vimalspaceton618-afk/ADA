@@ -40,8 +40,10 @@ class ProcessSupervisor:
         if not command or any(not isinstance(part, str) or not part for part in command):
             raise ValueError("command must be a non-empty sequence of strings")
         executable = Path(command[0]).name
-        if self._allowed and executable not in self._allowed:
-            raise PermissionError(f"executable is not allowlisted: {executable}")
+        if not self._allowed or executable not in self._allowed:
+            raise PermissionError(
+                f"executable is not allowlisted (configure allowed_executables): {executable}"
+            )
         if cwd is not None and not Path(cwd).is_dir():
             raise ValueError("cwd must be an existing directory")
         clean_env = None
