@@ -23,10 +23,10 @@ class PerceptionAdapter(Protocol):
 class PerceptionEngine:
     """Dispatches normalized inputs to explicitly registered modality adapters.
 
-    Text and JSON-compatible structured inspection are built in. SigLIP image
-    and Whisper audio adapters are optional and must be explicitly registered.
-    Video remains unsupported until a real adapter is registered; no synthetic
-    captions, transcripts, embeddings, or classifications are generated.
+    Text and JSON-compatible structured inspection are built in. SigLIP image,
+    Whisper audio, and SigLIP-backed sparse video adapters are optional and must
+    be explicitly registered. No synthetic captions, transcripts, embeddings,
+    temporal reasoning, or classifications are generated.
     """
 
     def __init__(self, *, normalizer: InputNormalizer | None = None) -> None:
