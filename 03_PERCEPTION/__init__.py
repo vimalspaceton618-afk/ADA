@@ -27,6 +27,16 @@ from .visual_perception import (
     ZeroShotLabelScore,
 )
 
+from .video_perception import (
+    DecodedVideo,
+    SampledVideoFrame,
+    SigLIPVideoAdapter,
+    VideoAdapterCapabilities,
+    VideoDecodeError,
+    VideoPerceptionAdapter,
+    decode_video,
+)
+
 __all__ = [
     "Modality",
     "PerceptionInput",
