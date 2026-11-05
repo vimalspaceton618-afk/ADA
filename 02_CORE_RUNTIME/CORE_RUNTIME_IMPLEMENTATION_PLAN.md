@@ -1,81 +1,73 @@
-# ADA Core Runtime — Implementation Plan
+# ADA Core Runtime — Implementation Record
 
 ## Objective
 
-Turn `02_CORE_RUNTIME` from an architectural directory scaffold into a tested, Python-first runtime foundation. This phase deliberately does not implement the ADA neural architecture or claim production-scale scheduling, distributed execution, or GPU acceleration.
+Implement a CPU-first runtime foundation in the architectural source tree 02_CORE_RUNTIME. Runtime orchestration is separate from neural model layers, model weights, and inference kernels.
 
-## Engineering principles
+## Implemented source map
 
-- Keep runtime orchestration separate from neural model layers and inference kernels.
-- Fail closed: reject invalid tasks, transitions, and configuration rather than silently guessing.
-- Make lifecycle transitions explicit and observable.
-- Keep the first implementation CPU-compatible and testable on Python 3.11+.
-- Use narrow interfaces so later backends (asyncio, process pools, distributed workers, PyTorch, CUDA) can be added without changing core contracts.
-- Avoid mandatory heavyweight ML dependencies in the runtime foundation.
-
-## Proposed subsystem boundaries
-
-| Subsystem | Responsibility | Initial implementation |
+| Subsystem | Canonical source | Implementation |
 |---|---|---|
-| `task_scheduler` | Queueing and dispatch policy | Deterministic in-memory FIFO scheduler contract |
-| `execution_engine` | Execute submitted work | Typed task runner with cancellation and timeout boundaries |
-| `state_manager` | Runtime/task state | Explicit state machine and transition validation |
-| `event_system` | Lifecycle events | Immutable event records and bounded in-process event dispatch |
-| `communication_bus` | Component messages | Typed envelopes and in-process pub/sub |
-| `concurrency` | Coordination primitives | Async-safe locks/semaphores only where required |
-| `process_manager` | Worker lifecycle | Deferred until process isolation is required |
-| `fault_recovery` | Retry/failure policy | Bounded retry policy with explicit retryable errors |
-| `runtime_monitor` | Health and diagnostics | Structured counters/timing hooks; no vendor lock-in |
+| Contracts | contracts.py | Immutable task/event contracts, lifecycle enum, typed errors, JSON-safe deep freezing |
+| Task scheduler | task_scheduler/fifo.py | Thread-safe bounded FIFO, dequeue, cancellation removal, backpressure |
+| State manager | state_manager/store.py | Versioned snapshots, guarded lifecycle transitions, execution-attempt accounting |
+| Execution engine | execution_engine/registry.py | Handler registry, duplicate protection, explicit resolution |
+| Event system | event_system/bus.py | Sequenced events, bounded history, subscription filters, isolated delivery failures |
+| Communication bus | communication_bus/messages.py | Typed message envelopes, topic pub/sub, correlation identifiers |
+| Concurrency | concurrency/primitives.py | Cancellation token and bounded semaphore capacity limiter |
+| Fault recovery | fault_recovery/policy.py | Explicit retryable exception classes, bounded attempts, capped exponential backoff |
+| Process manager | process_manager/supervisor.py | Owned subprocess tracking, allowlisted executables, graceful termination and forced stop |
+| Runtime monitor | runtime_monitor/health.py | Queue health, task-state counts, average execution duration, event failures |
+| Orchestrator | runtime.py | Submission, FIFO dispatch, lifecycle coordination, cooperative cancellation/deadlines, opt-in retries |
 
-## Hugging Face / upstream reference register
+## Public API and package layout
 
-These are reference implementations and model/config artifacts to inspect. They are not runtime dependencies by default and are not to be copied wholesale.
+- Canonical implementation: 02_CORE_RUNTIME/
+- Stable import surface: ada.runtime
+- ada/runtime/ contains compatibility facades that load canonical modules through importlib.
+- pyproject.toml includes both package trees in built distributions.
+- The numeric architecture directory is intentionally preserved as the source location; normal application code should import from ada.runtime.
 
-1. `state-spaces/mamba-130m-hf` — https://huggingface.co/state-spaces/mamba-130m-hf  
-   Its model card describes Transformers-compatible loading/generation and optional `causal-conv1d` / `mamba-ssm` optimized kernels. Its config illustrates Mamba-1 dimensions and cache-related settings. The card contains an apparent model-name inconsistency in its prose; verify source files rather than treating the description as authoritative.
-2. `state-spaces/mamba2-130m` — https://huggingface.co/state-spaces/mamba2-130m  
-   Its config records a Mamba2 layer selection and explicit attention-layer indices. It is a configuration reference, not a source-code implementation.
-3. `kernels-community/mamba-ssm` — https://huggingface.co/kernels-community/mamba-ssm  
-   Hub card lists entry points such as `selective_scan_fn`, `selective_state_update`, `mamba_chunk_scan_combined`, and `Mamba2`; card states no benchmark is available. It is a kernel reference only; inspect source and license before considering integration.
+## Runtime behavior
 
-## Licensing and provenance gate
+Task lifecycle:
 
-Before copying or adapting any upstream source:
-- Inspect the exact source repository's LICENSE and file-level headers.
-- Record upstream project, URL, commit/revision, SPDX license, and modified files.
+    CREATED -> QUEUED -> RUNNING -> SUCCEEDED
+                              |-> FAILED
+                              |-> CANCELLED
+                              |-> TIMED_OUT
+
+The runtime is caller-driven. submit() enqueues work; run_next() executes one task; run_until_idle() drains work. No background worker is silently created.
+
+Task inputs, successful outputs, events, and component messages accept JSON-compatible values and are deeply frozen. Invalid state transitions and duplicate task IDs are rejected.
+
+Cancellation and timeout behavior is cooperative for running handlers. Handlers must call TaskContext.checkpoint() at safe points. A non-cooperative blocking call cannot be forcibly interrupted inside a Python thread.
+
+Retries are disabled by default. A task type must be configured with a RetryPolicy that explicitly names retryable exception classes. Backoff is bounded and cancellation is observed during the wait.
+
+ProcessSupervisor starts no process by itself. Callers must supply an explicit executable allowlist. It never uses shell=True and can stop only processes it owns. It is not yet wired as an automatic task execution backend.
+
+## Upstream provenance and licensing gate
+
+The implementation in this phase is an interface/behavior implementation authored for ADA; it does not vendor Mamba source, model weights, tokenizer assets, or third-party kernel code.
+
+Before adapting upstream source in a later phase:
+- Inspect the exact repository LICENSE and file-level headers.
+- Record upstream project, URL, revision, SPDX license, and modified files.
 - Preserve copyright and attribution notices.
-- Ensure compatibility with ADA's repository license and redistribution plan.
-- Prefer clean-room interface/behavior reimplementation when licensing is unclear.
-- Do not copy model weights or tokenizer assets into this repository as part of runtime code.
+- Verify compatibility with ADA's repository license and redistribution plan.
+- Prefer a clean-room implementation if provenance or license compatibility is unclear.
 
-## Proposed implementation sequence
+## Verification status
 
-1. **Runtime contracts:** task envelope, task identifiers, lifecycle enum, state transition validator, runtime exceptions.
-2. **Events:** immutable event schema, event sink protocol, in-memory implementation, ordering and isolation tests.
-3. **Scheduler:** FIFO in-memory queue, bounded capacity, deterministic dequeue, backpressure behavior.
-4. **Execution:** handler registry, safe dispatch, cancellation and timeout semantics, exception propagation.
-5. **Fault recovery:** bounded retries with exponential backoff policy abstraction; no automatic retry for non-retryable errors.
-6. **Monitoring:** structured runtime metrics hooks and health snapshot.
-7. **Integration:** end-to-end tests proving accepted task → queued → running → terminal state, with event trace.
-8. **Optional model adapter:** only after runtime contracts stabilize; Mamba/ADA-TLA execution is owned by a separate model-kernel layer.
+The implementation files have been committed directly to main. Per the implementation instruction for this phase, no basic test run was requested or performed for this file-writing pass. Do not treat the existence of prior runtime CI runs as verification of this newer canonical-source migration.
 
-## Acceptance criteria
+## Explicit non-goals
 
-- Unit tests cover valid and invalid lifecycle transitions.
-- Queue capacity/backpressure behavior is deterministic.
-- Each accepted task reaches exactly one terminal state.
-- A failed task does not corrupt unrelated tasks.
-- Cancellation and timeout are distinguishable outcomes.
-- Event consumers cannot mutate published event records.
-- No hidden global mutable state.
-- Tests run on Python 3.11 and 3.12.
-- All upstream-derived code, if any, has documented provenance and compatible licensing.
-
-## Explicit non-goals for this phase
-
-- No claim of ADA Mamba/Mamba3 implementation.
-- No claim of ADA-TLA kernel implementation.
-- No GPU/CUDA/Triton performance claims.
 - No distributed scheduler or multi-node execution.
-- No autonomous retry loops without policy and observability.
-- No model-weight loading or generation API until the model interface is specified.
+- No durable event/message broker.
+- No asynchronous worker pool or background dispatcher.
+- No automatic process-backed task handler adapter.
+- No GPU/CUDA/Triton scheduling or model execution.
+- No production throughput or hard real-time guarantees.
+- Neural computation remains under 09_NEURAL_SUBSTRATE; inference adapters remain under 18_INFERENCE.
