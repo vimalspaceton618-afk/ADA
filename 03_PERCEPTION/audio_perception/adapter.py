@@ -19,6 +19,7 @@ class AudioAdapterCapabilities:
     supports_speaker_diarization: bool = False
     supports_audio_event_detection: bool = False
     supports_timestamps: bool = False
+    supports_language_conditioning: bool = False
 
 
 class AudioPerceptionAdapter(Protocol):
