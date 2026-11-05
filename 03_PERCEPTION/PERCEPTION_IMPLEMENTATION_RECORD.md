@@ -13,7 +13,9 @@ The subsystem must distinguish source observations from inferred semantics. It d
 - engine.py — adapter registry, dispatch, provenance checks and explicit unsupported/failed/rejected outcomes.
 - text_perception/processor.py — exact source text retention and deterministic surface statistics; no semantic model inference.
 - structured_perception/processor.py — bounded-depth structural inspection of JSON-compatible mappings.
-- visual_perception/adapter.py — visual model adapter protocol and capability declarations.
+- visual_perception/adapter.py — visual adapter protocol and capability declarations.
+- visual_perception/preprocessing.py — safe in-memory JPEG/PNG/WebP decoding, MIME verification, EXIF orientation and pixel limits.
+- visual_perception/siglip.py — optional pretrained SigLIP image embedding and caller-scoped zero-shot label scoring.
 - audio_perception/adapter.py — audio model adapter protocol and capability declarations.
 - sensory_fusion/fuser.py — grouping by caller-provided correlation ID without semantic fusion claims.
 - pattern_detection/detector.py — repeated lexical n-gram baseline.
@@ -35,10 +37,14 @@ Implemented deterministic infrastructure:
 - Surface repeated n-gram detection.
 - Perception integrity validation.
 
+Implemented learned visual inference:
+- SigLIP image feature extraction with model ID/revision and source-image provenance.
+- Optional caller-scoped image/text sigmoid matching scores.
+
 Interfaces only / model integration pending:
-- Image understanding, OCR, object detection and spatial grounding.
+- OCR, object detection, segmentation and spatial grounding.
 - Audio transcription, diarization and acoustic event classification.
-- Video temporal understanding.
+- Video frame sampling and temporal understanding.
 - Trained entity recognition.
 - Trained event detection.
 - Learned multimodal alignment and fusion.
@@ -46,7 +52,7 @@ Interfaces only / model integration pending:
 
 ## Source and model provenance requirements
 
-No external model implementation, weights, tokenizer, OCR engine, ASR engine, or upstream source code is vendored in this phase. Future adapters must record:
+No external model weights or tokenizer assets are vendored. The SigLIP adapter uses the upstream Transformers library and an external Hugging Face checkpoint; no upstream model implementation is copied into ADA. Future adapters must record:
 - Upstream repository and exact revision.
 - SPDX license and preserved notices.
 - Model identifier, weight revision and weight license.
@@ -61,12 +67,13 @@ Files were written individually to GitHub main. No basic test suite or local exe
 
 ## Next engineering sequence
 
-1. Define shared media metadata and timestamp/coordinate conventions.
-2. Implement actual visual and audio adapters with license/provenance review.
-3. Add source-grounded entity and temporal event model adapters.
-4. Design learned sensory fusion with explicit alignment supervision and missing-modality behavior.
-5. Connect PerceptionResult to 04_REPRESENTATION through versioned schemas.
-6. Add adversarial, corruption, calibration, latency and modality-ablation evaluations.
+1. Add OCR, object detection, segmentation and spatial grounding adapters with provenance review.
+2. Implement audio encoders, transcription and acoustic event perception.
+3. Define video frame sampling and temporal aggregation contracts.
+4. Add source-grounded entity and temporal event model adapters.
+5. Design learned sensory fusion with explicit alignment supervision and missing-modality behavior.
+6. Connect PerceptionResult to 04_REPRESENTATION through versioned schemas.
+7. Add adversarial, corruption, calibration, latency and modality-ablation evaluations.
 
 ## Non-goals of this phase
 
