@@ -23,5 +23,5 @@ for _module in (_input, _text, _structured, _fusion, _validation, _patterns, _vi
         globals()[_name] = getattr(_module, _name)
 
 __all__ = list(_core.__all__)
-for _module in (_input, _text, _structured, _fusion, _validation, _patterns, _visual, _audio, _entities, _events):
+for _module in (_input, _text, _structured, _fusion, _validation, _patterns, _visual, _audio, _video, _entities, _events):
     __all__.extend(name for name in _module.__all__ if name not in __all__)
