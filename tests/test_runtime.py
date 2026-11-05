@@ -181,7 +181,7 @@ def test_timeout_is_reported_as_distinct_terminal_state() -> None:
     snapshot = runtime.run_next()
     assert snapshot is not None
     assert snapshot.status is TaskStatus.TIMED_OUT
-    assert "exceeded its time limit" in (snapshot.error or "")
+    assert "exceeded its deadline" in (snapshot.error or "")
 
 
 def test_event_bus_is_bounded_immutable_and_isolates_subscriber_errors() -> None:
