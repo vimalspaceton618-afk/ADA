@@ -110,3 +110,40 @@ This adapter does not generate captions, OCR text, bounding boxes, object detect
 ### Verification status
 
 The implementation has been committed directly to main. No model checkpoint was downloaded, no GPU/CPU inference was executed, and no tests were run during this source-writing pass. The adapter is implemented in code, but its actual runtime behavior remains unverified until it is exercised with the optional dependencies and a locally available checkpoint.
+
+
+## Audio Perception v1 — Whisper transcription adapter
+
+Implemented as the next modality adapter:
+
+- audio_perception/preprocessing.py — in-memory WAV/FLAC decoding, MIME/container verification, finite-sample checks, duration limit, mono downmix and resampling to 16 kHz.
+- audio_perception/whisper.py — optional multilingual Whisper Base ASR adapter, transcript extraction, optional language conditioning, and segment-level timestamp retention.
+- audio_perception/adapter.py — explicit capability flags for transcription, timestamps, language conditioning, diarization and audio event detection.
+- audio_perception/__init__.py and 03_PERCEPTION/__init__.py — public API exports.
+- tests/test_audio_perception.py — fake-pipeline tests for transcript, timestamps, provenance, empty transcript failure and capability boundaries.
+- pyproject.toml — optional perception-audio dependency group (PyTorch, Transformers, SoundFile, SciPy, safetensors).
+- engine.py and README.md — dispatch and usage documentation.
+
+### Model provenance
+
+- Repository: https://huggingface.co/openai/whisper-base
+- Model: OpenAI Whisper Base, multilingual sequence-to-sequence automatic speech recognition.
+- Hugging Face model metadata reports approximately 72.6M parameters.
+- Hub repository license metadata: Apache-2.0.
+- Model card describes 680k hours of weakly supervised labelled speech training data.
+- Model revision is configurable; resolved checkpoint revision is recorded when available. Pin a commit SHA for reproducible deployments.
+- Weight handling: no checkpoint weights are copied into ADA. Adapter uses safetensors, disables remote custom code and defaults to local_files_only=True.
+
+### Input and output semantics
+
+The current decoder accepts WAV/FLAC only, validates declared MIME against the decoded container, enforces a configurable 30-minute default duration limit, rejects silent/non-finite audio, downmixes to mono and resamples to 16 kHz.
+
+Observation.extracted_text contains the transcript. Optional chunk boundaries are preserved as seconds relative to the supplied audio input. metadata.language can condition the language for transcription; this is not automatic language detection. Segment timestamps are not word-level forced alignment.
+
+### Explicit non-capabilities
+
+No speaker diarization, speaker identity, voice biometrics, acoustic event classification, emotion recognition, audio embedding extraction, MP3/AAC decoding or video audio extraction is implemented by this adapter.
+
+### Verification status
+
+Source files and tests have been committed directly to main. No Whisper checkpoint was downloaded, no real audio was transcribed, and no test suite or benchmark was run during this source-writing pass. The fake-pipeline tests are present but remain unexecuted in this pass.
