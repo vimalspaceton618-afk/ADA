@@ -218,3 +218,23 @@ def test_runtime_drain_limit_and_empty_queue() -> None:
     assert runtime.run_next() is None
     with pytest.raises(ValueError, match="max_tasks"):
         runtime.run_until_idle(max_tasks=-1)
+
+
+
+def test_health_snapshot_reports_queue_and_terminal_counts() -> None:
+    runtime = Runtime(queue_capacity=2)
+    runtime.register_handler("echo", lambda payload, context: payload)
+    runtime.submit(TaskSpec("echo", task_id="health-1"))
+    runtime.submit(TaskSpec("echo", task_id="health-2"))
+    assert runtime.health_snapshot().queue_at_capacity is True
+
+    runtime.run_next()
+    health = runtime.health_snapshot()
+    assert health.tasks_total == 2
+    assert health.queue_depth == 1
+    assert health.status_counts[TaskStatus.SUCCEEDED.value] == 1
+    assert health.status_counts[TaskStatus.QUEUED.value] == 1
+    assert health.terminal_tasks == 1
+    assert health.average_execution_seconds is not None
+    with pytest.raises(TypeError):
+        health.status_counts["failed"] = 100  # type: ignore[index]
