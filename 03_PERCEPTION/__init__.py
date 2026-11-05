@@ -13,6 +13,12 @@ from .contracts import (
     EvidenceSpan,
 )
 from .engine import PerceptionEngine
+from .audio_perception import (
+    DEFAULT_WHISPER_MODEL,
+    DEFAULT_WHISPER_REVISION,
+    TranscriptionSegment,
+    WhisperAudioAdapter,
+)
 from .visual_perception import (
     DEFAULT_SIGLIP_MODEL,
     DEFAULT_SIGLIP_REVISION,
@@ -28,6 +34,10 @@ __all__ = [
     "PerceptionResult",
     "PerceptionStatus",
     "EvidenceSpan",
+    "DEFAULT_WHISPER_MODEL",
+    "DEFAULT_WHISPER_REVISION",
+    "TranscriptionSegment",
+    "WhisperAudioAdapter",
     "PerceptionEngine",
     "DEFAULT_SIGLIP_MODEL",
     "DEFAULT_SIGLIP_REVISION",
