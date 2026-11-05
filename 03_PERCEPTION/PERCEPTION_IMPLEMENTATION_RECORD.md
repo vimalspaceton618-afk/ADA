@@ -43,8 +43,8 @@ Implemented learned visual inference:
 
 Interfaces only / model integration pending:
 - OCR, object detection, segmentation and spatial grounding.
-- Audio transcription, diarization and acoustic event classification.
-- Video frame sampling and temporal understanding.
+- Audio diarization and acoustic event classification.
+- Temporal video understanding, action recognition and object tracking.
 - Trained entity recognition.
 - Trained event detection.
 - Learned multimodal alignment and fusion.
@@ -175,3 +175,18 @@ The audio stream is ignored. Sparse frame embeddings do not constitute temporal 
 ### Verification status
 
 The test suite includes deterministic fake decoder/fake encoder coverage. Actual PyAV decoding, real SigLIP checkpoint inference, and video performance have not been exercised by those tests. GitHub Actions is the source of truth for the integration test result.
+
+
+## Integration verification — November 5, 2026
+
+GitHub Actions run [#157](https://github.com/vimalspaceton618-afk/ADA/actions/runs/42068438737), head commit `53e13ffa91334d1071986f114000a1c117b291f6`, completed successfully:
+- Python 3.11: 72 passed.
+- Python 3.12: 72 passed.
+
+These tests exercise deterministic contracts, fake Whisper pipeline behavior, fake video containers and fake image-adapter outputs. They verify import integration, timestamp handling, resource limits, cleanup, provenance and explicit capability boundaries. They do not constitute real-media decoding validation or real pretrained-model inference. No SigLIP or Whisper checkpoint was downloaded; no real audio/video input, model-quality benchmark, calibration study or throughput benchmark was executed.
+
+## v1 subsystem closure
+
+The v1 implementation includes deterministic text/structured input handling, optional SigLIP image features and caller-scoped matching scores, optional Whisper transcription, optional sparse SigLIP video frame embeddings, correlation-ID grouping, source/provenance validation, surface pattern detection, stable public exports and Python 3.11/3.12 CI coverage.
+
+This closes the current engineering scope for 03_PERCEPTION v1. It does not close the separately listed research and model-development work: OCR/object detection/segmentation/spatial grounding, speaker diarization, acoustic event detection, temporal video reasoning/action recognition, trained entity/event extraction, learned multimodal fusion, and real-world quality/performance evaluations remain deferred.
