@@ -39,6 +39,7 @@ class SigLIPVideoAdapter:
         max_duration_seconds: float = 600.0,
         max_video_bytes: int = 50 * 1024 * 1024,
         max_frame_pixels: int = 40_000_000,
+        max_decoded_frames: int = 100_000,
         container_opener: Any | None = None,
     ) -> None:
         if getattr(vision_adapter, "modality", None) is not Modality.IMAGE:
@@ -51,6 +52,7 @@ class SigLIPVideoAdapter:
         self.max_duration_seconds = max_duration_seconds
         self.max_video_bytes = max_video_bytes
         self.max_frame_pixels = max_frame_pixels
+        self.max_decoded_frames = max_decoded_frames
         self.container_opener = container_opener
 
     @staticmethod
@@ -92,6 +94,7 @@ class SigLIPVideoAdapter:
             max_duration_seconds=self.max_duration_seconds,
             max_video_bytes=self.max_video_bytes,
             max_frame_pixels=self.max_frame_pixels,
+            max_decoded_frames=self.max_decoded_frames,
             container_opener=self.container_opener,
         )
 
@@ -157,6 +160,16 @@ class SigLIPVideoAdapter:
         if not frame_records:
             raise VideoDecodeError("no video frames were encoded")
 
+        warnings = [
+            "Video is represented by sparse independent frame embeddings; no temporal model is used.",
+            "The audio track is ignored. Register audio perception separately for transcription.",
+            "Frame sampling can miss brief events between selected timestamps.",
+        ]
+        if decoded.duration_seconds is None:
+            warnings.append(
+                "Container duration was unavailable; bounded sampling may cover only the initial portion."
+            )
+
         return Observation(
             modality=Modality.VIDEO,
             status=PerceptionStatus.PARTIAL,
@@ -172,16 +185,14 @@ class SigLIPVideoAdapter:
                 "model_revision": model_revision or "unspecified",
                 "container_format": decoded.container_format,
                 "video_duration_seconds": decoded.duration_seconds,
-                "sampling_interval_seconds": float(self.sample_interval_seconds),
+                "requested_sampling_interval_seconds": float(self.sample_interval_seconds),
+                "effective_sampling_interval_seconds": decoded.effective_sample_interval_seconds,
+                "decoded_frame_count": decoded.decoded_frame_count,
                 "sampled_frame_count": len(frame_records),
                 "sampled_frames": frame_records,
                 "frame_embedding_semantics": "independent L2-normalized image features",
                 "temporal_reasoning": False,
                 "audio_extracted": False,
             },
-            warnings=(
-                "Video is represented by sparse independent frame embeddings; no temporal model is used.",
-                "The audio track is ignored. Register audio perception separately for transcription.",
-                "Frame sampling can miss brief events between selected timestamps.",
-            ),
+            warnings=tuple(warnings),
         )
