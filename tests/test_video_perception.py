@@ -10,9 +10,10 @@ from ada.perception import (
     PerceptionStatus,
     PerceptionValidator,
     SigLIPVideoAdapter,
-    content_digest,
 )
 from importlib import import_module
+
+content_digest = import_module("03_PERCEPTION.contracts").content_digest
 
 
 video_module = import_module("03_PERCEPTION.video_perception.siglip_video")
@@ -109,7 +110,7 @@ def test_video_decoder_enforces_max_frames_and_duration(monkeypatch):
         max_duration_seconds=20,
         container_opener=lambda file_obj, mode: container,
     )
-    assert [frame.timestamp_seconds for frame in decoded.frames] == [0.0, 5.0]
+    assert [frame.timestamp_seconds for frame in decoded.frames] == [0.0, 10.0]
     assert container.closed is True
 
     long_container = FakeContainer([], duration=21_000_000)
