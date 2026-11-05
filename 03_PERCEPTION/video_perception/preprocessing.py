@@ -201,7 +201,7 @@ def decode_video(
                     )
                 )
                 while next_sample_at <= timestamp + 1e-9:
-                    next_sample_at += interval
+                    next_sample_at += effective_interval
                 if len(selected) >= max_frames:
                     break
 
