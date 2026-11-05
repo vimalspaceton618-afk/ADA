@@ -13,7 +13,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
 | Text perception | text_perception/processor.py | Exact text preservation and deterministic surface statistics | Baseline implemented |
 | Structured perception | structured_perception/processor.py | JSON-compatible structure and shape inspection | Baseline implemented |
 | Visual perception | visual_perception/adapter.py, visual_perception/siglip.py | Image adapter contract and pretrained SigLIP feature extraction | SigLIP image inference implemented; OCR/object detection deferred |
-| Audio perception | audio_perception/adapter.py, audio_perception/preprocessing.py, audio_perception/whisper.py | Audio adapter, WAV/FLAC decoding and Whisper ASR | Transcription implemented; diarization/event detection deferred |
+| Audio perception | audio_perception/adapter.py, audio_perception/preprocessing.py, audio_perception/whisper.py | WAV/FLAC decoding and Whisper ASR | Optional transcription adapter implemented; diarization/event detection deferred |\n| Video perception | video_perception/adapter.py, video_perception/preprocessing.py, video_perception/siglip_video.py | Bounded PyAV frame sampling and per-frame SigLIP embeddings | Optional sparse frame feature extraction implemented; temporal reasoning/audio extraction deferred |
 | Sensory fusion | sensory_fusion/fuser.py | Group observations by explicit correlation ID | Deterministic grouping only |
 | Pattern detection | pattern_detection/detector.py | Repeated token n-gram detection | Surface baseline |
 | Entity recognition | entity_recognition/recognizer.py | Source-grounded entity extraction contract | Interface only |
@@ -59,7 +59,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
     )
     image_result = engine.perceive(image_input)
 
-The built-in engine supports deterministic text and structured-data observation. A concrete SigLIP image adapter is available as an optional dependency; register it explicitly before image inference. Audio and video return UNSUPPORTED until real adapters are registered.
+The built-in engine supports deterministic text and structured-data observation. SigLIP image, Whisper audio, and SigLIP-backed video adapters are optional and must be explicitly registered before inference. Missing adapters return UNSUPPORTED.
 
 ## Core invariants
 
