@@ -72,7 +72,7 @@ def test_whisper_adapter_transcription_preserves_provenance_and_timestamps(monke
             "end_seconds": 0.4,
         },
         {
-            "text": " from ADA.",
+            "text": "from ADA.",
             "start_seconds": 0.4,
             "end_seconds": 1.2,
         },
