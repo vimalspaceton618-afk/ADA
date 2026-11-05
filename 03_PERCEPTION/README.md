@@ -30,6 +30,7 @@ Perception is not cognition: it records and structures evidence. It must not sil
         PerceptionValidator,
         SigLIPVisionAdapter,
         WhisperAudioAdapter,
+        SigLIPVideoAdapter,
     )
 
     engine = PerceptionEngine()
@@ -138,7 +139,54 @@ The image input must contain JPEG, PNG, or WebP bytes and a matching MIME conten
 
 Every successful image observation contains a normalized image embedding, source digest, model ID/revision, and decoded image dimensions. Supplying metadata.candidate_labels requests caller-scoped image/text sigmoid scores. Those scores are not calibrated probabilities, and their ranking depends on the supplied candidate set. The adapter does not produce captions, OCR text, bounding boxes, object detections, or spatial grounding.
 
-No model weights are committed to this repository. Whisper ASR is optional and must be explicitly registered. Video temporal encoding, diarization and acoustic event models are not bundled. Future adapters must document model identity, version, preprocessing, licenses, confidence semantics, timestamp conventions, and source offsets.
+No model weights are committed to this repository. SigLIP, Whisper ASR and sparse SigLIP video perception are optional and must be explicitly registered. Video temporal reasoning, diarization and acoustic event models are not bundled. Future adapters must document model identity, version, preprocessing, licenses, confidence semantics, timestamp conventions, and source offsets.
+
+## Video model integration: sparse SigLIP frame perception
+
+ADA includes an optional video adapter that decodes bounded, sparse frames with PyAV and sends each selected frame through the existing SigLIP image adapter. It does not download or duplicate a second vision checkpoint. The adapter records the source video digest, source-frame indices, presentation timestamps, dimensions, per-frame embeddings, and model identity.
+
+Install optional dependencies:
+
+    python -m pip install -e ".[perception-video,perception-vision]"
+
+Create and register the adapters:
+
+    from ada.perception import (
+        Modality,
+        PerceptionEngine,
+        PerceptionInput,
+        SigLIPVisionAdapter,
+        SigLIPVideoAdapter,
+    )
+
+    engine = PerceptionEngine()
+    vision = SigLIPVisionAdapter.from_pretrained(
+        "./models/siglip-base-patch16-224",
+        local_files_only=True,
+        revision="main",
+    )
+    engine.register_adapter(vision)
+
+    video = SigLIPVideoAdapter(
+        vision_adapter=vision,
+        sample_interval_seconds=5.0,
+        max_frames=12,
+        max_duration_seconds=600.0,
+    )
+    engine.register_adapter(video)
+
+    with open("sample.mp4", "rb") as file:
+        video_bytes = file.read()
+
+    result = engine.perceive(PerceptionInput(
+        modality=Modality.VIDEO,
+        content=video_bytes,
+        content_type="video/mp4",
+    ))
+
+The default limits are 50 MiB input, 600 seconds media duration, 12 sampled frames, 100,000 decoded frames and 40 megapixels per decoded frame. The configured 5-second interval is a minimum; when duration is known, the interval expands as needed to distribute the bounded frame sample across the clip. If duration metadata is unavailable, the observation includes a warning that samples may cover only the initial portion. Supported declared MIME types are MP4, QuickTime, Matroska, WebM and MPEG.
+
+The returned observation is PARTIAL by design. Frames are encoded independently; there is no temporal model, motion estimation, object tracking, action recognition or video captioning. The audio stream is ignored and no audio is extracted. Sparse sampling can miss brief events between selected frames. Supply audio independently and register Whisper for transcription when required.
 
 ## Downstream interfaces
 
@@ -146,4 +194,4 @@ PerceptionResult and Observation are intended to be consumed by 04_REPRESENTATIO
 
 ## Operational limits
 
-The current implementation is an engineering foundation, not a complete multimodal intelligence system. It does not claim semantic text understanding, language identification, trained NER, visual recognition, audio transcription, video understanding, learned multimodal fusion, or production benchmark performance.
+The current implementation is an engineering foundation, not a complete multimodal intelligence system. It does not claim semantic text understanding, language identification, trained NER, OCR, object detection, temporal video understanding, acoustic event classification, learned multimodal fusion, calibrated confidence, or production benchmark performance. Optional SigLIP image features/label scores, Whisper transcription, and sparse SigLIP video-frame embeddings are implemented, but real checkpoint/media evaluation remains a separate validation task.
