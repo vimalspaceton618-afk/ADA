@@ -25,6 +25,7 @@ from .contracts import (
     freeze_json,
 )
 from .events import InMemoryEventBus
+from .monitor import RuntimeHealthSnapshot, RuntimeMonitor
 from .scheduler import FIFOScheduler
 from .state import RuntimeStateStore
 
@@ -82,6 +83,9 @@ class Runtime:
         self._handlers: dict[str, TaskHandler] = {}
         self._tokens: dict[str, threading.Event] = {}
         self._lock = threading.RLock()
+        # Serialize lifecycle mutations with their event publication while
+        # allowing subscribers to run without holding the runtime-state lock.
+        self._event_lock = threading.RLock()
 
     def register_handler(
         self, task_type: str, handler: TaskHandler, *, replace: bool = False
@@ -99,24 +103,26 @@ class Runtime:
         """Accept a task into the bounded FIFO queue or reject it atomically."""
         if not isinstance(task, TaskSpec):
             raise TypeError("task must be a TaskSpec")
-        with self._lock:
-            if self.state.contains(task.task_id):
-                raise DuplicateTaskError(f"task already exists: {task.task_id}")
-            self.state.create(task)
-            token = threading.Event()
-            self._tokens[task.task_id] = token
-            try:
-                self.scheduler.put(task)
-            except Exception:
-                self._tokens.pop(task.task_id, None)
-                self.state.discard_created(task.task_id)
-                raise
-            queued = self.state.transition(task.task_id, TaskStatus.QUEUED)
-        self.events.publish(
-            "task.queued",
-            task.task_id,
-            {"task_type": task.task_type, "queue_depth": self.scheduler.depth},
-        )
+        with self._event_lock:
+            with self._lock:
+                if self.state.contains(task.task_id):
+                    raise DuplicateTaskError(f"task already exists: {task.task_id}")
+                self.state.create(task)
+                token = threading.Event()
+                self._tokens[task.task_id] = token
+                try:
+                    self.scheduler.put(task)
+                except Exception:
+                    self._tokens.pop(task.task_id, None)
+                    self.state.discard_created(task.task_id)
+                    raise
+                queued = self.state.transition(task.task_id, TaskStatus.QUEUED)
+                queue_depth = self.scheduler.depth
+            self.events.publish(
+                "task.queued",
+                task.task_id,
+                {"task_type": task.task_type, "queue_depth": queue_depth},
+            )
         return queued
 
     def cancel(self, task_id: str) -> bool:
@@ -125,57 +131,56 @@ class Runtime:
         A running handler must observe the request through context.checkpoint().
         Returns False when the task is already terminal or is unknown.
         """
-        event_type: str | None = None
-        with self._lock:
-            try:
-                snapshot = self.state.get(task_id)
-            except UnknownTaskError:
-                return False
-            if snapshot.status.is_terminal:
-                return False
-            token = self._tokens.get(task_id)
-            if token is None:
-                return False
-            token.set()
-            if snapshot.status is TaskStatus.QUEUED:
-                if not self.scheduler.remove(task_id):
-                    # Another run_next call can only remove a task while holding
-                    # this same runtime lock, so this indicates an invariant fault.
-                    raise InvalidTransitionError(
-                        f"queued task {task_id} is missing from the scheduler"
-                    )
-                self.state.transition(task_id, TaskStatus.CANCELLED)
-                self._tokens.pop(task_id, None)
-                event_type = "task.cancelled"
-            elif snapshot.status is TaskStatus.RUNNING:
-                event_type = "task.cancellation_requested"
-            else:
-                return False
-        self.events.publish(event_type, task_id, {"source": "runtime.cancel"})
+        with self._event_lock:
+            event_type: str | None = None
+            with self._lock:
+                try:
+                    snapshot = self.state.get(task_id)
+                except UnknownTaskError:
+                    return False
+                if snapshot.status.is_terminal:
+                    return False
+                token = self._tokens.get(task_id)
+                if token is None:
+                    return False
+                token.set()
+                if snapshot.status is TaskStatus.QUEUED:
+                    if not self.scheduler.remove(task_id):
+                        raise InvalidTransitionError(
+                            f"queued task {task_id} is missing from the scheduler"
+                        )
+                    self.state.transition(task_id, TaskStatus.CANCELLED)
+                    self._tokens.pop(task_id, None)
+                    event_type = "task.cancelled"
+                elif snapshot.status is TaskStatus.RUNNING:
+                    event_type = "task.cancellation_requested"
+                else:
+                    return False
+            self.events.publish(event_type, task_id, {"source": "runtime.cancel"})
         return True
 
     def run_next(self) -> TaskSnapshot | None:
         """Execute one FIFO task; return None when the queue is empty."""
-        with self._lock:
-            task = self.scheduler.get_nowait()
-            if task is None:
-                return None
-            queued_snapshot = self.state.get(task.task_id)
-            if queued_snapshot.status is not TaskStatus.QUEUED:
-                raise InvalidTransitionError(
-                    f"scheduler contained task {task.task_id} in state "
-                    f"{queued_snapshot.status.value}"
-                )
-            running = self.state.transition(task.task_id, TaskStatus.RUNNING)
-            token = self._tokens[task.task_id]
-            handler = self._handlers.get(task.task_type)
-            context = TaskContext(task.task_id, token, task.timeout_seconds)
-
-        self.events.publish(
-            "task.running",
-            task.task_id,
-            {"task_type": task.task_type, "version": running.version},
-        )
+        with self._event_lock:
+            with self._lock:
+                task = self.scheduler.get_nowait()
+                if task is None:
+                    return None
+                queued_snapshot = self.state.get(task.task_id)
+                if queued_snapshot.status is not TaskStatus.QUEUED:
+                    raise InvalidTransitionError(
+                        f"scheduler contained task {task.task_id} in state "
+                        f"{queued_snapshot.status.value}"
+                    )
+                running = self.state.transition(task.task_id, TaskStatus.RUNNING)
+                token = self._tokens[task.task_id]
+                handler = self._handlers.get(task.task_type)
+                context = TaskContext(task.task_id, token, task.timeout_seconds)
+            self.events.publish(
+                "task.running",
+                task.task_id,
+                {"task_type": task.task_type, "version": running.version},
+            )
 
         target_status = TaskStatus.SUCCEEDED
         result: Any = None
@@ -188,8 +193,6 @@ class Runtime:
             context.checkpoint()
             result = handler(task.payload, context)
             context.checkpoint()
-            # Validate output before attempting the state transition so an
-            # unsupported object becomes an ordinary FAILED task, not a stuck one.
             result = freeze_json(result, path="task.result")
         except TaskCancelledError as exc:
             target_status = TaskStatus.CANCELLED
@@ -201,36 +204,35 @@ class Runtime:
             target_status = TaskStatus.FAILED
             error = f"{type(exc).__name__}: {exc}"
 
-        with self._lock:
-            # Close the race between a handler's last checkpoint and a concurrent
-            # cancellation request. The lock makes the terminal transition the
-            # single winner against cancel().
-            if target_status is TaskStatus.SUCCEEDED:
-                try:
-                    context.checkpoint()
-                except TaskCancelledError as exc:
-                    target_status = TaskStatus.CANCELLED
-                    error = str(exc)
-                except TaskTimedOutError as exc:
-                    target_status = TaskStatus.TIMED_OUT
-                    error = str(exc)
-            finished = self.state.transition(
+        with self._event_lock:
+            with self._lock:
+                # Resolve cancellation/deadline races immediately before the
+                # single terminal transition.
+                if target_status is TaskStatus.SUCCEEDED:
+                    try:
+                        context.checkpoint()
+                    except TaskCancelledError as exc:
+                        target_status = TaskStatus.CANCELLED
+                        error = str(exc)
+                    except TaskTimedOutError as exc:
+                        target_status = TaskStatus.TIMED_OUT
+                        error = str(exc)
+                finished = self.state.transition(
+                    task.task_id,
+                    target_status,
+                    result=result if target_status is TaskStatus.SUCCEEDED else None,
+                    error=error,
+                )
+                self._tokens.pop(task.task_id, None)
+            self.events.publish(
+                f"task.{target_status.value}",
                 task.task_id,
-                target_status,
-                result=result if target_status is TaskStatus.SUCCEEDED else None,
-                error=error,
+                {
+                    "task_type": task.task_type,
+                    "version": finished.version,
+                    "error": error,
+                },
             )
-            self._tokens.pop(task.task_id, None)
-
-        self.events.publish(
-            f"task.{target_status.value}",
-            task.task_id,
-            {
-                "task_type": task.task_type,
-                "version": finished.version,
-                "error": error,
-            },
-        )
         return finished
 
     def run_until_idle(self, *, max_tasks: int | None = None) -> tuple[TaskSnapshot, ...]:
@@ -247,3 +249,13 @@ class Runtime:
 
     def get_task(self, task_id: str) -> TaskSnapshot:
         return self.state.get(task_id)
+
+    def health_snapshot(self) -> RuntimeHealthSnapshot:
+        """Return point-in-time queue, lifecycle, and event-delivery metrics."""
+        return RuntimeMonitor.snapshot(
+            self.state.all(),
+            queue_depth=self.scheduler.depth,
+            queue_capacity=self.scheduler.capacity,
+            retained_events=len(self.events.history),
+            event_delivery_failures=len(self.events.delivery_failures),
+        )
