@@ -44,4 +44,11 @@ __all__ = [
     "SigLIPVisionAdapter",
     "VisualAdapterCapabilities",
     "ZeroShotLabelScore",
+    "DecodedVideo",
+    "SampledVideoFrame",
+    "SigLIPVideoAdapter",
+    "VideoAdapterCapabilities",
+    "VideoDecodeError",
+    "VideoPerceptionAdapter",
+    "decode_video",
 ]
