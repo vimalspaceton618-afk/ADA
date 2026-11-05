@@ -1,25 +1,24 @@
 # ADA Core Runtime
 
-This directory defines the architectural boundary and subsystem map for ADA's
-CPU-first runtime. The importable implementation lives in ada/runtime/ because
-a directory beginning with a numeric prefix is not a valid Python package name.
+02_CORE_RUNTIME/ is the canonical source tree for ADA's CPU-first orchestration runtime. The stable Python import surface is ada.runtime; its facade delegates to implementations in this directory. Runtime orchestration remains independent of neural layers, model weights, and inference kernels.
 
-## Implemented foundation
+## Architecture
 
-| Runtime responsibility | Implementation | Status |
+| Subsystem | Source | Responsibility |
 |---|---|---|
-| Task contracts and lifecycle | ada/runtime/contracts.py, state.py | Implemented |
-| FIFO dispatch and bounded queue | ada/runtime/scheduler.py | Implemented |
-| Synchronous handler execution | ada/runtime/runtime.py | Implemented |
-| Cooperative cancellation and deadlines | TaskContext in runtime.py | Implemented |
-| Immutable lifecycle events | ada/runtime/events.py | Implemented |
-| In-process event publication | InMemoryEventBus in events.py | Implemented |
-| Health summary and counters | ada/runtime/monitor.py | Implemented |
-| Process isolation / worker supervision | process_manager/ | Deferred |
-| Retry orchestration and backoff | fault_recovery/ | Deferred |
-| Async/distributed scheduling | concurrency/, scheduler extensions | Deferred |
+| Contracts | contracts.py | Immutable task/event records, JSON-safe payloads, lifecycle states and typed errors |
+| Task scheduler | task_scheduler/fifo.py | Bounded FIFO queue, deterministic dequeue, backpressure |
+| State manager | state_manager/store.py | Thread-safe task state machine, versioned snapshots, attempt tracking |
+| Execution engine | execution_engine/registry.py | Handler registration, lookup and duplicate protection |
+| Event system | event_system/bus.py | Sequenced lifecycle events, bounded history, subscriber isolation |
+| Communication bus | communication_bus/messages.py | Typed component messages, topic pub/sub, correlation IDs |
+| Concurrency | concurrency/primitives.py | Cancellation token and bounded capacity limiter |
+| Fault recovery | fault_recovery/policy.py | Explicit retry classification and bounded exponential backoff |
+| Process manager | process_manager/supervisor.py | Owned subprocess lifecycle, graceful stop then kill, executable allowlist |
+| Runtime monitor | runtime_monitor/health.py | Immutable queue, lifecycle, timing and event health snapshots |
+| Orchestrator | runtime.py | Submission, dispatch, cancellation, retries and terminal-state coordination |
 
-## Minimal usage
+## Quick start
 
     from ada.runtime import Runtime, TaskSpec
 
@@ -27,65 +26,57 @@ a directory beginning with a numeric prefix is not a valid Python package name.
 
     def summarize(payload, context):
         context.checkpoint()
-        return {"summary": f"items={len(payload['items'])}"}
+        return {"count": len(payload["items"])}
 
     runtime.register_handler("summarize", summarize)
-    accepted = runtime.submit(
+    runtime.submit(
         TaskSpec(
             task_type="summarize",
             payload={"items": ["a", "b", "c"]},
             task_id="summary-001",
-            timeout_seconds=5.0,
+            timeout_seconds=10.0,
         )
     )
     completed = runtime.run_next()
+    print(completed.status, completed.result)
 
-submit() accepts work into a bounded in-memory FIFO queue. run_next() is
-explicitly caller-driven; this initial runtime does not start background workers.
+submit() validates and queues a task. run_next() executes exactly one task; run_until_idle() drains queued work. Dispatch is caller-driven: constructing a runtime does not create background workers.
 
-## Lifecycle
+## Lifecycle contract
 
     CREATED -> QUEUED -> RUNNING -> SUCCEEDED
                               |-> FAILED
                               |-> CANCELLED
                               |-> TIMED_OUT
 
-Every accepted task has one terminal state. Invalid transitions are rejected.
-The state store returns immutable snapshots; task inputs, event details, and
-successful results are restricted to JSON-compatible values and deeply frozen.
+Accepted tasks are transitioned through a guarded state machine. Terminal states cannot be reopened. Task payloads, successful results, event details and message payloads accept JSON-compatible data and are deeply frozen.
 
-## Cancellation and timeouts
+## Cancellation and deadlines
 
-Queued tasks can be cancelled immediately. Running tasks receive a thread-safe
-cancellation request and must call context.checkpoint() to observe it.
-Timeouts use the same cooperative checkpoint boundary. A synchronous Python
-handler blocked in a non-cooperative operation cannot be forcibly interrupted;
-the runtime reports timeout after control returns or when a checkpoint is hit.
-Use process isolation in a later phase for hard termination boundaries.
+Queued tasks can be cancelled immediately. A running handler receives a TaskContext; it must call context.checkpoint() at safe interruption points to observe cancellation or deadline expiry. A synchronous handler blocked in a non-cooperative call cannot be interrupted by Python thread cancellation. Use a supervised subprocess boundary for work requiring hard termination.
 
-## Event delivery
+## Retry semantics
 
-Events are immutable, monotonically sequenced, and retained in a bounded
-in-memory history. Subscribers run synchronously outside the bus lock. A
-subscriber exception is recorded and isolated so it does not prevent delivery
-to other subscribers or corrupt task state. This is an in-process mechanism,
-not a durable message broker.
+Retries are disabled unless a task type is given an explicit RetryPolicy with a non-empty tuple of retryable exception classes. Retry attempts are bounded and backoff is capped. Cancellation and timeout are terminal outcomes and are not retried. There is no implicit retry of arbitrary failures.
 
-## Verification
+## Process supervision and security
 
-The runtime tests cover lifecycle legality, immutable contracts, FIFO order,
-queue backpressure, task failure isolation, missing handlers, invalid handler
-results, queued/running cancellation, timeout distinction, bounded event
-history, subscriber isolation, and bounded draining.
+ProcessSupervisor only controls processes it starts. It never invokes a shell. It requires an explicit allowed_executables allowlist; an empty allowlist denies all process launches. Environment overrides are explicit. Stop sends a graceful termination request, waits for the configured grace period, and then kills the owned process if necessary.
 
-Run locally:
+The supervisor is a low-level component and is not automatically invoked by the task runtime. A later process-backed execution adapter must define serialization, output capture, resource limits, and worker isolation before it is used for task handlers.
 
-    python -m pip install -e ".[dev]"
-    python -m pytest -q
+## Communication and events
 
-## Deliberate non-goals
+Lifecycle events and component messages are separate channels:
+- InMemoryEventBus publishes runtime lifecycle events with monotonically increasing sequence numbers.
+- InMemoryMessageBus transports typed messages by topic and supports correlation IDs.
 
-This foundation does not claim distributed execution, process supervision,
-hard-kill timeouts, asynchronous dispatch, GPU scheduling, model loading,
-Mamba/ADA-TLA execution, or production-scale throughput. Neural computation
-and inference kernels remain separate from runtime orchestration.
+Both are bounded, in-memory, synchronous transports. Subscriber failures are retained as diagnostics and isolated from other subscribers. Neither is a durable broker.
+
+## Public import compatibility
+
+Use ada.runtime for normal Python imports. The package facade loads the canonical implementation from this directory using importlib, allowing the repository's numbered architecture folder to remain the source-of-truth location. pyproject.toml includes both package trees in built distributions.
+
+## Operational boundaries
+
+This implementation is CPU-first and has no mandatory ML dependency. It does not claim distributed scheduling, durable messaging, async worker pools, GPU scheduling, model execution, production throughput, or hard real-time guarantees. Neural computation belongs under 09_NEURAL_SUBSTRATE; inference adapters belong under 18_INFERENCE.
