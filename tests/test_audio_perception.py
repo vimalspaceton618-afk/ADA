@@ -25,7 +25,7 @@ class FakeASR:
             "text": "Hello from ADA.",
             "chunks": [
                 {"text": "Hello", "timestamp": (0.0, 0.4)},
-                {"text": " from ADA.", "timestamp": (0.4, 1.2)},
+                {"text": "from ADA.", "timestamp": (0.4, 1.2)},
             ],
         }
 
