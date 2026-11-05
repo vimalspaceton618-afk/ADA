@@ -165,7 +165,15 @@ def content_digest(content: str | bytes | Mapping[str, Any]) -> str:
     elif isinstance(content, bytes):
         raw = content
     else:
-        # Stable representation for the JSON-compatible, frozen mapping tree.
+        # Convert immutable MappingProxyType/tuple trees into plain JSON values.
         import json
-        raw = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+        def thaw(value: Any) -> Any:
+            if isinstance(value, Mapping):
+                return {key: thaw(item) for key, item in value.items()}
+            if isinstance(value, (list, tuple)):
+                return [thaw(item) for item in value]
+            return value
+
+        raw = json.dumps(thaw(content), sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
