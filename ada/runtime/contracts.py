@@ -143,6 +143,16 @@ class TaskSnapshot:
     result: Any = None
     error: str | None = None
 
+    @property
+    def task_id(self) -> str:
+        """Convenience identifier for this task snapshot."""
+        return self.task.task_id
+
+    @property
+    def task_type(self) -> str:
+        """Task handler key associated with this snapshot."""
+        return self.task.task_type
+
 
 @dataclass(frozen=True, slots=True)
 class RuntimeEvent:
