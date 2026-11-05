@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Protocol
+from typing import Protocol
 
 from .contracts import (
     Modality, Observation, PerceptionInput, PerceptionResult, PerceptionStatus,
