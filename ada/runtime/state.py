@@ -102,7 +102,7 @@ class RuntimeStateStore:
                 started_at=now if target is TaskStatus.RUNNING else current.started_at,
                 finished_at=now if target.is_terminal else current.finished_at,
                 result=frozen_result,
-                error=error if target is TaskStatus.FAILED else current.error,
+                error=error if target.is_terminal else current.error,
             )
             self._tasks[task_id] = updated
             return updated
