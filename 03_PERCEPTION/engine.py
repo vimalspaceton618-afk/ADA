@@ -23,8 +23,9 @@ class PerceptionAdapter(Protocol):
 class PerceptionEngine:
     """Dispatches normalized inputs to explicitly registered modality adapters.
 
-    Text and JSON-compatible structured inspection are built in. Image, audio,
-    and video return UNSUPPORTED until a real adapter is registered; no synthetic
+    Text and JSON-compatible structured inspection are built in. SigLIP image
+    and Whisper audio adapters are optional and must be explicitly registered.
+    Video remains unsupported until a real adapter is registered; no synthetic
     captions, transcripts, embeddings, or classifications are generated.
     """
 
