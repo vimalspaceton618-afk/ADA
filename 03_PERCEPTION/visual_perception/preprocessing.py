@@ -5,8 +5,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from io import BytesIO
-
-from PIL import Image, ImageOps, UnidentifiedImageError
+from typing import Any
 
 
 _SUPPORTED_MIME_FORMATS = {
@@ -22,7 +21,7 @@ class ImageDecodeError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class DecodedImage:
-    image: Image.Image
+    image: Any
     detected_format: str
     original_width: int
     original_height: int
@@ -41,6 +40,13 @@ def decode_image(
     The image is decoded in memory only. SVG, GIF, TIFF, remote URLs, and
     arbitrary image plugins are intentionally not accepted by this adapter.
     """
+    try:
+        from PIL import Image, ImageOps, UnidentifiedImageError
+    except ImportError as exc:
+        raise ImportError(
+            "Image decoding requires Pillow; install the perception-vision extra"
+        ) from exc
+
     if not isinstance(raw, bytes) or not raw:
         raise ImageDecodeError("image content must be non-empty bytes")
     if type(max_pixels) is not int or max_pixels < 1:
