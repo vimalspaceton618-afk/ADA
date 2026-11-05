@@ -12,5 +12,13 @@ license = { file = "LICENSE" }
 authors = [{ name = "ADA contributors" }]
 dependencies = []
 
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+yaml = ["PyYAML>=6"]
+
 [tool.setuptools.packages.find]
 include = ["ada*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
