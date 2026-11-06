@@ -51,7 +51,11 @@ def analyze_cognition(
       arithmetic: (left_number, operator, right_number)
       hypotheses: (statement[, supporting_evidence[, missing_evidence]])
     """
-    from .contracts import CognitiveResult, EvidenceItem\n    if not isinstance(result, CognitiveResult):\n        raise TypeError("result must be a CognitiveResult")\n    if not isinstance(query, str) or not query.strip():\n        raise ValueError("query must be a non-empty string")
+    from .contracts import CognitiveResult, EvidenceItem
+    if not isinstance(result, CognitiveResult):
+        raise TypeError("result must be a CognitiveResult")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("query must be a non-empty string")
 
     concepts = tuple(concepts)
     relations = tuple(relations)
