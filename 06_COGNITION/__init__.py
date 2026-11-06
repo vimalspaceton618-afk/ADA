@@ -8,5 +8,7 @@ from .engine import CognitionEngine
 __all__ = [
     "SCHEMA_VERSION", "CognitiveDecision", "CognitiveResult",
     "CognitiveStatus", "CognitiveTask", "DecisionStatus", "EvidenceItem",
-    "PlanStep", "CognitionEngine",
+    "PlanStep", "CognitionEngine", "CognitionAnalysis", "analyze_cognition",
 ]
+
+from .integration import CognitionAnalysis, analyze_cognition
