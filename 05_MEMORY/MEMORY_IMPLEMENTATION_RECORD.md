@@ -9,7 +9,7 @@
 - Optimistic version checks and immutable creation timestamps.
 - Active, archived and terminal deleted lifecycle states.
 - Expiry-aware deterministic lexical retrieval.
-- Representation-to-memory ingestion using the representation's source content SHA-256.
+- Representation-to-memory ingestion preserving the upstream source content SHA-256 and storing the independent representation digest in metadata.
 - Stable `ada.memory` facade.
 - PDF-aligned neural Energy Memory:
   - 512 learnable slots by default.
@@ -19,7 +19,8 @@
   - feature-wise sigmoid gate via `W_mem_gate`.
   - optional attention/raw/gate diagnostics.
   - gradient-based bank learning; no unsupported online write/erase policy.
-- Dedicated unit tests for neural output shapes, probability normalization, gating, gradients, validation and state-dict round-trip.
+- Dedicated unit tests for neural output shapes, probability normalization, gating, gradients, exact Hopfield energy derivative, validation and state-dict round-trip.
+- PDF-aligned noisy top-1 MoE FFN with sparse expert dispatch, straight-through router gradients, load-balancing loss, learned MoE/memory blending and residual contract.
 
 ## Research considered
 
