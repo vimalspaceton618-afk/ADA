@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ada:representation:1.0.0",
+  "title": "ADA Representation v1",
+  "description": "A typed, provenance-preserving intermediate representation envelope.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "representation_id",
+    "kind",
+    "modality",
+    "source_input_id",
+    "source_content_sha256",
+    "status",
+    "created_at",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "representation_id": {"type": "string", "minLength": 1},
+    "kind": {
+      "enum": ["token", "vector", "symbolic", "temporal", "spatial", "relational", "multimodal"]
+    },
+    "modality": {"type": "string", "minLength": 1},
+    "source_input_id": {"type": "string", "minLength": 1},
+    "source_content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["complete", "partial"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "payload": {"type": "object", "minProperties": 1},
+    "metadata": {"type": "object"}
+  }
+}
