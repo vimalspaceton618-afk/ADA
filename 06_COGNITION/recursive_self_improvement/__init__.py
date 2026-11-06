@@ -1,10 +1,9 @@
 """Bounded recursive self-improvement (RSI) for cognition strategies.
 
-This module improves *versioned strategy artifacts*, never its own source code,
-weights, safety policy, or execution permissions. A candidate is accepted only
-when an independent evaluator reports a measurable improvement over a fixed
-baseline on a held-out regression set. The evaluator and candidate generator
-are injected by the caller; this module never executes generated code.
+Only versioned strategy parameters may be proposed. Generated code, model
+weights, safety policy and tool permissions are outside this module. Candidate
+promotion requires an independent evaluator, a fixed held-out regression set,
+a minimum primary-score improvement, and non-regression on every guarded metric.
 """
 from __future__ import annotations
 
@@ -40,10 +39,11 @@ class StrategyArtifact:
             raise ValueError("version must be a positive integer")
         if not isinstance(self.parameters, Mapping):
             raise TypeError("parameters must be a mapping")
-        # Ensure parameters are JSON-serializable, finite and detached from caller mutation.
         normalized = json.loads(json.dumps(dict(self.parameters), sort_keys=True, allow_nan=False))
         object.__setattr__(self, "parameters", normalized)
-        if self.created_at and not isinstance(self.created_at, str):
+        if self.parent_digest is not None and (not isinstance(self.parent_digest, str) or not self.parent_digest):
+            raise ValueError("parent_digest must be a non-empty string or None")
+        if not isinstance(self.created_at, str):
             raise TypeError("created_at must be a string")
 
     @property
@@ -70,11 +70,20 @@ class Evaluation:
             raise ValueError("cases must be positive")
         if type(self.passed) is not int or not 0 <= self.passed <= self.cases:
             raise ValueError("passed must be within cases")
-        if not isinstance(self.evaluator_id, str) or not self.evaluator_id.strip() or not isinstance(self.dataset_digest, str) or not self.dataset_digest.strip():
-            raise ValueError("evaluator_id and dataset_digest are required")
+        if not isinstance(self.evaluator_id, str) or not self.evaluator_id.strip():
+            raise ValueError("evaluator_id is required")
+        if not isinstance(self.dataset_digest, str) or not self.dataset_digest.strip():
+            raise ValueError("dataset_digest is required")
+        if not isinstance(self.metrics, Mapping):
+            raise TypeError("metrics must be a mapping")
+        normalized = {}
         for key, value in self.metrics.items():
-            if not isinstance(key, str) or not math.isfinite(float(value)):
+            if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise ValueError("metrics must contain finite numeric values")
+            if not math.isfinite(float(value)):
+                raise ValueError("metrics must contain finite numeric values")
+            normalized[key] = float(value)
+        object.__setattr__(self, "metrics", normalized)
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,13 +110,7 @@ class RSIResult:
 
 
 class BoundedRSI:
-    """Propose/evaluate/promote strategy revisions with regression guards.
-
-    Candidate generation returns a parameter mapping only. Evaluation is
-    performed separately for both baseline and candidate on the same immutable
-    held-out cases. Promotion is monotonic on the primary score and guarded by
-    a maximum regression per named metric. Failed candidates are discarded.
-    """
+    """Propose/evaluate/promote bounded strategies; never execute generated code."""
 
     def __init__(
         self,
@@ -120,6 +123,8 @@ class BoundedRSI:
         max_iterations: int = 3,
         allowed_parameter_keys: Iterable[str] | None = None,
     ):
+        if not isinstance(active_strategy, StrategyArtifact):
+            raise TypeError("active_strategy must be a StrategyArtifact")
         if not callable(evaluator) or not callable(generator):
             raise TypeError("evaluator and generator must be callable")
         for name, value in (("min_improvement", min_improvement),
@@ -171,18 +176,22 @@ class BoundedRSI:
                 created_at=datetime.now(timezone.utc).isoformat(),
             )
             candidate_eval = self._evaluate(candidate, cases)
+            if baseline_eval.dataset_digest != candidate_eval.dataset_digest:
+                raise ValueError("baseline and candidate must use the same evaluation dataset")
+            if baseline_eval.evaluator_id != candidate_eval.evaluator_id:
+                raise ValueError("baseline and candidate must use the same evaluator")
             delta = candidate_eval.score - baseline_eval.score
             regressed = []
             for key, base_value in baseline_eval.metrics.items():
-                if key in candidate_eval.metrics:
-                    drop = float(base_value) - float(candidate_eval.metrics[key])
-                    if drop > self.max_metric_regression:
-                        regressed.append(key)
+                if key not in candidate_eval.metrics:
+                    regressed.append(key)
+                elif float(base_value) - float(candidate_eval.metrics[key]) > self.max_metric_regression:
+                    regressed.append(key)
             accepted = delta >= self.min_improvement and not regressed
             reason = (
-                "accepted: held-out score improved and no guarded metric regressed"
+                "accepted: held-out score improved and guarded metrics did not regress"
                 if accepted else
-                ("rejected: guarded metric regression in " + ", ".join(sorted(regressed))
+                ("rejected: guarded metric regression or missing metric in " + ", ".join(sorted(regressed))
                  if regressed else "rejected: improvement below minimum threshold")
             )
             record = ImprovementRecord(
@@ -210,13 +219,10 @@ class BoundedRSI:
         return tuple(results)
 
     def rollback(self, artifact: StrategyArtifact) -> None:
-        """Restore an explicitly retained, immutable strategy artifact."""
         if not isinstance(artifact, StrategyArtifact):
             raise TypeError("rollback target must be a StrategyArtifact")
         self.active_strategy = artifact
 
 
-__all__ = [
-    "SCHEMA_VERSION", "StrategyArtifact", "Evaluation",
-    "ImprovementRecord", "RSIResult", "BoundedRSI",
-]
+__all__ = ["SCHEMA_VERSION", "StrategyArtifact", "Evaluation",
+           "ImprovementRecord", "RSIResult", "BoundedRSI"]
