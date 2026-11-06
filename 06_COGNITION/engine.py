@@ -126,6 +126,13 @@ class CognitionEngine:
             tuple(scores),
         )
 
+    def analyze(self, result: CognitiveResult, query: str, **subsystem_inputs):
+        """Run the opt-in subsystem pipeline over a completed cognition result."""
+        from .integration import analyze_cognition
+        if not isinstance(result, CognitiveResult):
+            raise TypeError("result must be a CognitiveResult")
+        return analyze_cognition(result, query, **subsystem_inputs)
+
     def process(self, task: CognitiveTask, *, representations: Iterable = (),
                 retrieve_memory: bool = True, namespace: str = "default",
                 memory_limit: int = 20) -> CognitiveResult:
