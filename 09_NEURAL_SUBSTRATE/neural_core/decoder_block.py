@@ -240,5 +240,7 @@ class ADADecoderBlock(nn.Module):
                 mixed = mixed * attention_mask.unsqueeze(-1).to(mixed.dtype)
 
         after_mixer = x + mixed
-        hidden_states, aux = self.ffn(self.norm2(after_mixer))
+        hidden_states, aux = self.ffn(
+            self.norm2(after_mixer), residual=after_mixer
+        )
         return hidden_states, aux
