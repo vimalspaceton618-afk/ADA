@@ -2,7 +2,7 @@ from __future__ import annotations
 import pytest
 
 def test_controller_preserves_stage_order():
-    from  importlib import import_module
+    from importlib import import_module
     mod=import_module("06_COGNITION.cognitive_controller")
     stages=mod.CognitiveController((lambda x:x+1,lambda x:x*2)).run(2)
     assert [s.output for s in stages]==[3,6]
