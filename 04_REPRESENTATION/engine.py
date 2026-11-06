@@ -109,6 +109,12 @@ class RepresentationEngine:
                 RepresentationResultStatus.FAILED,
                 errors=("observation modality does not match perception result",),
             )
+        if getattr(observation.status, "value", None) != source_status:
+            return self._empty_result(
+                result,
+                RepresentationResultStatus.FAILED,
+                errors=("observation status does not match perception result",),
+            )
         if observation.content_sha256 != result.content_sha256:
             return self._empty_result(
                 result,
