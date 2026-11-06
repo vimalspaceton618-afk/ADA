@@ -1,4 +1,4 @@
-# Memory v1 implementation record
+# ADA Memory implementation record
 
 ## Implemented
 
@@ -8,18 +8,33 @@
 - Namespace-scoped bounded in-memory storage.
 - Optimistic version checks and immutable creation timestamps.
 - Active, archived and terminal deleted lifecycle states.
-- Expiry-aware lexical retrieval with deterministic scoring and stable tie-breaking.
-- Representation-to-memory ingestion preserving representation digest and source metadata.
-- Stable `ada.memory` facade and unit tests.
+- Expiry-aware deterministic lexical retrieval.
+- Representation-to-memory ingestion using the representation's source content SHA-256.
+- Stable `ada.memory` facade.
+- PDF-aligned neural Energy Memory:
+  - 512 learnable slots by default.
+  - `X @ M.T` associative scores.
+  - temperature-scaled softmax over slots.
+  - retrieval with `attention @ M`.
+  - feature-wise sigmoid gate via `W_mem_gate`.
+  - optional attention/raw/gate diagnostics.
+  - gradient-based bank learning; no unsupported online write/erase policy.
+- Dedicated unit tests for neural output shapes, probability normalization, gating, gradients, validation and state-dict round-trip.
+
+## Research considered
+
+- ADA's own `Ada-src.pdf` is the implementation authority for the Energy Memory read path.
+- Tencent Hy-Memory informs the separation of learned memory writing/state revision from neural associative retrieval. Its large writer model is not a runtime dependency.
+- R^3Mem, S^3-Attention and SYNAPSE are documented as future research directions, not copied or claimed as implemented.
 
 ## Deliberately deferred
 
 - Durable database backends, encryption at rest, multi-process consistency and distributed replication.
 - Vector embeddings, ANN indexes, learned relevance ranking and semantic search.
-- Automatic memory extraction, summarization, fact verification and conflict resolution.
-- Knowledge graph construction, associative traversal, episodic reconstruction and procedural execution.
-- Automated consolidation/decay policies and user-facing retention administration.
+- Learned memory writer, fact verification, conflict resolution and cross-session consolidation.
+- Knowledge graph construction, spreading activation, episodic reconstruction and procedural execution.
+- Integration/fusion into a specific model FFN/MoE block; this requires inspecting and changing the upstream model source.
 
 ## Verification
 
-The implementation is covered by `tests/test_memory.py`. CI is the authority for pass/fail status; this record must only be updated with a run URL and commit SHA after the corresponding workflow succeeds.
+CI is authoritative. Do not mark this milestone verified until a GitHub Actions run against the final commit SHA completes successfully for every configured Python version. Previous runs failed in the test-suite step; see the current Actions page before relying on status.
