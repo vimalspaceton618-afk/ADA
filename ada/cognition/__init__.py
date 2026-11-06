@@ -12,8 +12,18 @@ EvidenceItem = _module.EvidenceItem
 PlanStep = _module.PlanStep
 CognitionEngine = _module.CognitionEngine
 
+# Expose the eleven cognition subsystems through the stable ada.cognition facade.
+_SUBSYSTEMS = (
+    "cognitive_controller", "attention_mechanism", "abstraction_engine",
+    "concept_formation", "relationship_engine", "causal_reasoning",
+    "logical_reasoning", "mathematical_reasoning", "hypothesis_generation",
+    "uncertainty_estimation", "metacognition",
+)
+for _name in _SUBSYSTEMS:
+    globals()[_name] = import_module(f"06_COGNITION.{_name}")
+
 __all__ = [
     "SCHEMA_VERSION", "CognitiveDecision", "CognitiveResult",
     "CognitiveStatus", "CognitiveTask", "DecisionStatus", "EvidenceItem",
-    "PlanStep", "CognitionEngine",
+    "PlanStep", "CognitionEngine", *_SUBSYSTEMS,
 ]
