@@ -30,7 +30,27 @@ def _representation_status(result: Any) -> RepresentationStatus:
     return RepresentationStatus.COMPLETE
 
 
-def _new_representation(
+\n\ndef _validate_candidate_scores(value: Any) -> tuple[dict[str, Any], ...] | None:
+    if value is None:
+        return None
+    if not isinstance(value, (list, tuple)):
+        raise TypeError("candidate_scores must be a sequence")
+    validated: list[dict[str, Any]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise TypeError(f"candidate_scores[{index}] must be a mapping")
+        label = item.get("label")
+        score = item.get("sigmoid_score")
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"candidate_scores[{index}] label must be non-empty")
+        if isinstance(score, bool) or not isinstance(score, (int, float)):
+            raise TypeError(f"candidate_scores[{index}] sigmoid_score must be numeric")
+        score_value = float(score)
+        if not math.isfinite(score_value) or not 0.0 <= score_value <= 1.0:
+            raise ValueError(f"candidate_scores[{index}] sigmoid_score must be finite in [0, 1]")
+        validated.append({"label": label, "sigmoid_score": score_value})
+    return tuple(validated)
+\ndef _new_representation(
     result: Any,
     *,
     kind: RepresentationKind,
@@ -98,17 +118,25 @@ class ImageRepresentationAdapter:
             embedding if isinstance(embedding, (list, tuple)) else (),
             expected_dimension=expected,
         )
+        payload: dict[str, Any] = {
+            "values": list(vector),
+            "dimension": len(vector),
+            "l2_norm": norm,
+            "vector_semantics": attributes.get(
+                "embedding_type", "model_feature_vector"
+            ),
+        }
+        candidate_scores = _validate_candidate_scores(attributes.get("candidate_scores"))
+        if candidate_scores is not None:
+            payload["candidate_scores"] = list(candidate_scores)
+            payload["candidate_score_semantics"] = attributes.get(
+                "candidate_score_semantics",
+                "sigmoid_image_text_matching_scores_not_calibrated_probabilities",
+            )
         return (_new_representation(
             result,
             kind=RepresentationKind.VECTOR,
-            payload={
-                "values": list(vector),
-                "dimension": len(vector),
-                "l2_norm": norm,
-                "vector_semantics": attributes.get(
-                    "embedding_type", "model_feature_vector"
-                ),
-            },
+            payload=payload,
             metadata={
                 "model_id": attributes.get("model_id"),
                 "model_revision": attributes.get("model_revision"),
@@ -197,15 +225,22 @@ class VideoRepresentationAdapter:
             frame_index = frame.get("frame_index")
             if type(frame_index) is not int or frame_index < 0:
                 raise ValueError("video frame_index must be a non-negative integer")
+            frame_payload: dict[str, Any] = {
+                "values": list(vector),
+                "dimension": len(vector),
+                "l2_norm": norm,
+                "vector_semantics": "independent_siglip_frame_embedding",
+            }
+            candidate_scores = _validate_candidate_scores(frame.get("candidate_scores"))
+            if candidate_scores is not None:
+                frame_payload["candidate_scores"] = list(candidate_scores)
+                frame_payload["candidate_score_semantics"] = (
+                    "sigmoid_image_text_matching_scores_not_calibrated_probabilities"
+                )
             outputs.append(_new_representation(
                 result,
                 kind=RepresentationKind.VECTOR,
-                payload={
-                    "values": list(vector),
-                    "dimension": len(vector),
-                    "l2_norm": norm,
-                    "vector_semantics": "independent_siglip_frame_embedding",
-                },
+                payload=frame_payload,
                 metadata={
                     "transform": "siglip_video_frame_vector.v1",
                     "frame_index": frame_index,
