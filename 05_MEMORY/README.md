@@ -84,6 +84,21 @@ for item in projected.representations:
     memory.remember_representation(item, namespace="default")
 ```
 
+## Integrated neural substrate block
+
+`09_NEURAL_SUBSTRATE/expert_systems/moe_energy_memory.py` implements the PDF's integrated FFN path. It dispatches each token to one SwiGLU expert using noisy top-1 routing and a straight-through selector, computes the 512-slot Energy Memory branch in parallel, learns a per-token MoE/memory blend, and returns the residual hidden state plus auxiliary diagnostics.
+
+```python
+import torch
+from ada.neural import MoEEnergyMemoryFFN
+
+ffn = MoEEnergyMemoryFFN(d_model=768, num_experts=8, num_slots=512)
+hidden, aux = ffn(torch.randn(2, 128, 768))
+loss = language_model_loss + 0.01 * aux["load_balancing_loss"]
+```
+
+The block already includes its residual connection; a parent block must not add the same residual again. The caller must include `load_balancing_loss` in its training objective. The repository still does not contain the sequence mixer, full decoder/model, or a complete pretraining loop, so this is an integrated FFN/MoE component—not a complete ADA language model.
+
 ## Research references and design boundaries
 
 - ADA source research (`Ada-src.pdf`): 512-slot associative Energy Memory, temperature-scaled softmax retrieval, feature-wise sigmoid gate.
