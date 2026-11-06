@@ -51,7 +51,7 @@ def analyze_cognition(
       arithmetic: (left_number, operator, right_number)
       hypotheses: (statement[, supporting_evidence[, missing_evidence]])
     """
-    from .contracts import CognitiveResult, DecisionStatus\n    if not isinstance(result, CognitiveResult):\n        raise TypeError("result must be a CognitiveResult")\n    if not isinstance(query, str) or not query.strip():\n        raise ValueError("query must be a non-empty string")
+    from .contracts import CognitiveResult, EvidenceItem\n    if not isinstance(result, CognitiveResult):\n        raise TypeError("result must be a CognitiveResult")\n    if not isinstance(query, str) or not query.strip():\n        raise ValueError("query must be a non-empty string")
 
     concepts = tuple(concepts)
     relations = tuple(relations)
@@ -59,7 +59,10 @@ def analyze_cognition(
     logical_premises = tuple(logical_premises)
     arithmetic = tuple(arithmetic)
     hypotheses = tuple(hypotheses)
-    evidence_texts = tuple(item.content for item in result.evidence)
+    evidence_items = tuple(result.evidence)
+    if any(not isinstance(item, EvidenceItem) for item in evidence_items):
+        raise TypeError("result.evidence must contain EvidenceItem values")
+    evidence_texts = tuple(item.content for item in evidence_items)
     focus_items = tuple((item.evidence_id, item.content) for item in result.evidence)
 
     def attention_stage(ctx):
