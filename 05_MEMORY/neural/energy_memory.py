@@ -62,6 +62,30 @@ class EnergyMemory(nn.Module):
     def gate_projection(self) -> nn.Linear:
         return self.W_mem_gate
 
+    def energy(self, x: Tensor) -> Tensor:
+        """Exact Hopfield-style scalar energy per token, shape [B, L].
+
+        V(x) = -temperature * logsumexp(x M.T / temperature)
+               + 0.5 * ||x||^2
+        Its input gradient is x - softmax(x M.T / temperature) @ M.
+        """
+        if not isinstance(x, Tensor):
+            raise TypeError("x must be a torch.Tensor")
+        if x.ndim != 3:
+            raise ValueError("x must have shape [batch, sequence, dim]")
+        if x.shape[-1] != self.dim:
+            raise ValueError(f"expected final dimension {self.dim}, got {x.shape[-1]}")
+        if not x.is_floating_point():
+            raise TypeError("x must use a floating-point dtype")
+        if x.device != self.energy_mem.device:
+            raise ValueError("x and EnergyMemory parameters must be on the same device")
+        scores = torch.matmul(x, self.energy_mem.transpose(0, 1))
+        log_partition = self.temperature * torch.logsumexp(
+            scores / self.temperature, dim=-1
+        )
+        quadratic = 0.5 * x.square().sum(dim=-1)
+        return -log_partition + quadratic
+
     def forward(self, x: Tensor, *, return_aux: bool = False):
         if not isinstance(x, Tensor):
             raise TypeError("x must be a torch.Tensor")
