@@ -83,3 +83,16 @@ def test_decoder_rejects_bad_dimensions():
         ADADecoderBlock(dim=10, layer_idx=1, n_heads=3)
     with pytest.raises(ValueError, match="layer_idx"):
         ADADecoderBlock(dim=12, layer_idx=-1)
+
+
+def test_decoder_uses_pre_norm_values_but_preserves_un_normalized_residual():
+    block = ADADecoderBlock(
+        dim=8, layer_idx=0, num_experts=2, num_slots=4, expansion_factor=2
+    ).eval()
+    x = torch.randn(2, 3, 8)
+    normalized = block.norm1(x)
+    after_mixer = x + block.mixer(normalized)
+    ffn_input = block.norm2(after_mixer)
+    expected, _ = block.ffn(ffn_input, residual=after_mixer)
+    actual, _ = block(x)
+    torch.testing.assert_close(actual, expected)
