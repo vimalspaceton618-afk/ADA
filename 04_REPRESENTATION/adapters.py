@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from collections.abc import Mapping
 from typing import Any, Protocol
 
@@ -30,7 +32,9 @@ def _representation_status(result: Any) -> RepresentationStatus:
     return RepresentationStatus.COMPLETE
 
 
-\n\ndef _validate_candidate_scores(value: Any) -> tuple[dict[str, Any], ...] | None:
+
+
+def _validate_candidate_scores(value: Any) -> tuple[dict[str, Any], ...] | None:
     if value is None:
         return None
     if not isinstance(value, (list, tuple)):
@@ -50,7 +54,8 @@ def _representation_status(result: Any) -> RepresentationStatus:
             raise ValueError(f"candidate_scores[{index}] sigmoid_score must be finite in [0, 1]")
         validated.append({"label": label, "sigmoid_score": score_value})
     return tuple(validated)
-\ndef _new_representation(
+
+def _new_representation(
     result: Any,
     *,
     kind: RepresentationKind,
