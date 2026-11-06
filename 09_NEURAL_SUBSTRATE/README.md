@@ -43,3 +43,29 @@ The integrated block uses the detailed Hopfield source configuration: memory vec
 ## Scope boundary
 
 This implements the model-side FFN/MoE execution component, not a complete ADA language model. The repository does not yet have an executable Mamba/TensorNet sequence mixer, decoder stack, token embedding/language-model head, or end-to-end training runtime. These must be integrated as separate neural-substrate milestones; no placeholder implementation is claimed here.
+
+
+## Hybrid decoder block
+
+Canonical module: `neural_core/decoder_block.py`
+
+`ADADecoderBlock` connects the verified MoE/Energy Memory FFN to a pre-norm sequence mixer. Even-numbered layers use the PDF's gated depthwise-convolution `Mamba2SSD` code path; odd-numbered layers use causal low-rank multi-head attention.
+
+```python
+from ada.neural import ADADecoderBlock
+
+block = ADADecoderBlock(
+    dim=768, layer_idx=0, n_heads=2,
+    num_experts=8, num_slots=512,
+)
+hidden_states, aux = block(hidden_states)
+loss = task_loss + 0.01 * aux["load_balancing_loss"]
+```
+
+The FFN supports an explicit residual stream so the block can normalize its FFN input while preserving the unnormalized residual. The block owns both residual additions; callers must not add another residual around it.
+
+### Source fidelity and limitations
+
+- The PDF's displayed `Mamba2SSD` implementation is a gated depthwise convolution. It does not implement the selective state-space recurrence, discretization, or associative scan. The repository preserves that source path but does not claim a production Mamba-2 SSD implementation.
+- The PDF's displayed `TensorNetAttention.forward` is an output-projection stub. ADA implements causal low-rank Q/K multi-head attention to make the alternating attention branch executable. This is an explicit completion of an incomplete source sketch, not a verbatim reproduction.
+- This milestone implements a decoder **block**, not yet a full token embedding/decoder stack/language-model head or training runtime.
