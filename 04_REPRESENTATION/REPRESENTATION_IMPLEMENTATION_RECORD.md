@@ -61,3 +61,12 @@ The JSON Schema file declares Draft 2020-12. The application-level representatio
 4. Add trained relation/entity outputs with evidence spans and provenance.
 5. Evaluate temporal and multimodal alignment using explicit datasets, negative pairs, missing-modality tests, and ablations.
 6. Define migration and compatibility tests for downstream 05_MEMORY, 06_COGNITION, and 07_WORLD_MODEL consumers.
+
+
+## CI verification — November 6, 2026
+
+GitHub Actions run [#190](https://github.com/vimalspaceton618-afk/ADA/actions/runs/42164216591), head commit `d3e59bc997758afa17f83c2d8e835c6a9fbfa48d`, completed successfully:
+- Python 3.11: 89 passed.
+- Python 3.12: 89 passed.
+
+The suite validates deterministic transforms from controlled perception observations, source ID/digest preservation, status consistency, vector finiteness/dimensions, token offsets, audio/video time boundaries, serialization immutability, candidate score preservation and bounds, and explicit-correlation grouping. It does not establish real model quality, semantic understanding, spatial detection, or learned multimodal alignment.
