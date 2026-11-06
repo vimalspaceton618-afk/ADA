@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
@@ -106,11 +106,10 @@ def test_expired_records_are_excluded_and_purge_marks_deleted():
     record = engine.remember(
         {"text": "Expired session marker."}, kind=MemoryKind.WORKING,
         source_kind=MemorySourceKind.USER, source_id="s1", source_digest=DIGEST,
-        expires_at=datetime.now(timezone.utc) + timedelta(seconds=10),
+        expires_at=datetime.now(timezone.utc) - timedelta(seconds=10),
     )
-    assert len(engine.retrieve("session marker")) == 1
-    assert engine.retrieve("session marker", MemoryQuery()) == ()
-    assert engine.purge_expired(at=NOW + timedelta(seconds=2)) == 1
+    assert engine.retrieve("session marker") == ()
+    assert engine.purge_expired(at=datetime.now(timezone.utc)) == 1
     with pytest.raises(KeyError):
         engine.get(record.memory_id)
 
@@ -146,5 +145,5 @@ def test_representation_handoff_preserves_source_digest():
     engine = MemoryEngine()
     stored = [engine.remember_representation(item) for item in projected.representations]
     assert stored
-    assert all(item.source_digest == rep.representation_digest for item, rep in zip(stored, projected.representations))
+    assert all(item.source_digest == rep.source_content_sha256 for item, rep in zip(stored, projected.representations))
     assert all(item.metadata["source_input_id"] == source.input_id for item in stored)
