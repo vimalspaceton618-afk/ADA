@@ -61,15 +61,21 @@ def test_memory_retrieval_preserves_provenance_and_can_rank_candidate():
 def test_ambiguous_candidates_abstain():
     memory = MemoryEngine()
     memory.remember(
-        {"text": "inspect cooling system"},
+        {"text": "inspect cooling system equipment"},
         kind=MemoryKind.EPISODIC,
         source_kind=MemorySourceKind.USER,
         source_id="source-1",
         source_digest="b" * 64,
     )
-    # Duplicate candidate labels are rejected at the task boundary.
-    with pytest.raises(ValueError, match="duplicates"):
-        CognitiveTask(objective="choose", candidate_actions=("inspect cooling system", "inspect cooling system"))
+    result = CognitionEngine(memory_engine=memory).process(
+        CognitiveTask(
+            objective="choose",
+            query="inspect cooling system",
+            candidate_actions=("inspect cooling system", "inspect cooling equipment"),
+        )
+    )
+    assert result.decision.status is DecisionStatus.ABSTAINED
+    assert result.decision.selected_action is None
 
 
 def test_caller_plan_order_is_preserved():
