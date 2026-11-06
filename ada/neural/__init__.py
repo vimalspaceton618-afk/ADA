@@ -4,6 +4,7 @@ from importlib import import_module
 
 _MEMORY_EXPORTS = {"EnergyMemory", "EnergyMemoryOutput"}
 _EXPERT_EXPORTS = {"ExactGLUExpert", "MoEEnergyMemoryFFN"}
+_DECODER_EXPORTS = {"ADADecoderBlock", "Mamba2SSD", "RMSNorm", "TensorNetAttention"}
 
 
 def __getattr__(name: str):
@@ -22,7 +23,7 @@ def __getattr__(name: str):
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | _MEMORY_EXPORTS | _EXPERT_EXPORTS)
+    return sorted(set(globals()) | _MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS)
 
 
-__all__ = sorted(_MEMORY_EXPORTS | _EXPERT_EXPORTS)
+__all__ = sorted(_MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS)
