@@ -51,8 +51,7 @@ def analyze_cognition(
       arithmetic: (left_number, operator, right_number)
       hypotheses: (statement[, supporting_evidence[, missing_evidence]])
     """
-    if not isinstance(query, str) or not query.strip():
-        raise ValueError("query must be a non-empty string")
+    from .contracts import CognitiveResult, DecisionStatus\n    if not isinstance(result, CognitiveResult):\n        raise TypeError("result must be a CognitiveResult")\n    if not isinstance(query, str) or not query.strip():\n        raise ValueError("query must be a non-empty string")
 
     concepts = tuple(concepts)
     relations = tuple(relations)
@@ -83,7 +82,7 @@ def analyze_cognition(
         values = ()
         if causal_source is not None:
             values = causal_reasoning.causal_reachability(causal_edges, causal_source)
-        elif tuple(causal_edges):
+        elif causal_edges:
             raise ValueError("causal_source is required when causal_edges are supplied")
         return {**ctx, "causal_reachable": values}
 
