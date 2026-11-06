@@ -74,3 +74,10 @@ def test_causal_edges_require_explicit_source():
 def test_pipeline_rejects_empty_query():
     with pytest.raises(ValueError, match="query"):
         analyze_cognition(_result(), " ")
+
+
+def test_cognition_engine_exposes_integrated_analysis():
+    engine = CognitionEngine()
+    report = engine.analyze(_result(), "cooling system")
+    assert report.audit.evidence_count == 1
+    assert len(report.stage_trace) == 10
