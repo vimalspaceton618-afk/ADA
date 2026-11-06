@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import math
 from importlib import import_module
-from typing import Any
 
 try:
     import torch
