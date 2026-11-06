@@ -11,6 +11,8 @@ DecisionStatus = _module.DecisionStatus
 EvidenceItem = _module.EvidenceItem
 PlanStep = _module.PlanStep
 CognitionEngine = _module.CognitionEngine
+CognitionAnalysis = _module.CognitionAnalysis
+analyze_cognition = _module.analyze_cognition
 
 # Expose the eleven cognition subsystems through the stable ada.cognition facade.
 _SUBSYSTEMS = (
@@ -25,5 +27,5 @@ for _name in _SUBSYSTEMS:
 __all__ = [
     "SCHEMA_VERSION", "CognitiveDecision", "CognitiveResult",
     "CognitiveStatus", "CognitiveTask", "DecisionStatus", "EvidenceItem",
-    "PlanStep", "CognitionEngine", *_SUBSYSTEMS,
+    "PlanStep", "CognitionEngine", "CognitionAnalysis", "analyze_cognition", *_SUBSYSTEMS,
 ]
