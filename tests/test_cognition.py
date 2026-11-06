@@ -67,13 +67,6 @@ def test_ambiguous_candidates_abstain():
         source_id="source-1",
         source_digest="b" * 64,
     )
-    result = CognitionEngine(memory_engine=memory).process(
-        CognitiveTask(
-            objective="choose",
-            query="inspect cooling system",
-            candidate_actions=("inspect cooling system", "inspect cooling system"),
-        )
-    ) if False else None
     # Duplicate candidate labels are rejected at the task boundary.
     with pytest.raises(ValueError, match="duplicates"):
         CognitiveTask(objective="choose", candidate_actions=("inspect cooling system", "inspect cooling system"))
