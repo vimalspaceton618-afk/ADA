@@ -47,3 +47,18 @@ def test_energy_memory_state_dict_and_deterministic_eval():
     restored = EnergyMemory(12, slots=6)
     restored.load_state_dict(module.state_dict())
     torch.testing.assert_close(restored(x), expected)
+
+
+def test_hopfield_energy_gradient_matches_x_minus_associative_retrieval():
+    module = EnergyMemory(
+        dim=5, slots=7, temperature=0.7, init_std=0.2, bias=False
+    ).double()
+    x = torch.randn(2, 3, 5, dtype=torch.float64, requires_grad=True)
+
+    value = module.energy(x).sum()
+    gradient, = torch.autograd.grad(value, x)
+
+    scores = x.detach() @ module.energy_mem.detach().transpose(0, 1)
+    attention = torch.softmax(scores / module.temperature, dim=-1)
+    expected = x.detach() - attention @ module.energy_mem.detach()
+    torch.testing.assert_close(gradient, expected, rtol=1e-9, atol=1e-9)
