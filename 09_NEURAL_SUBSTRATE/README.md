@@ -69,3 +69,29 @@ The FFN supports an explicit residual stream so the block can normalize its FFN 
 - The PDF's displayed `Mamba2SSD` implementation is a gated depthwise convolution. It does not implement the selective state-space recurrence, discretization, or associative scan. The repository preserves that source path but does not claim a production Mamba-2 SSD implementation.
 - The PDF's displayed `TensorNetAttention.forward` is an output-projection stub. ADA implements causal low-rank Q/K multi-head attention to make the alternating attention branch executable. This is an explicit completion of an incomplete source sketch, not a verbatim reproduction.
 - This milestone implements a decoder **block**, not yet a full token embedding/decoder stack/language-model head or training runtime.
+
+
+## Full causal language-model stack
+
+Canonical module: `neural_core/modeling_ada.py`
+
+`ADAForCausalLM` assembles token and learned position embeddings, alternating decoder blocks, final RMSNorm, and a tied-by-default or untied vocabulary projection.
+
+```python
+from ada.neural import ADAConfig, ADAForCausalLM
+
+config = ADAConfig(
+    vocab_size=32000, dim=768, n_layers=12, n_heads=12,
+    attention_rank=64, max_seq_len=2048,
+)
+model = ADAForCausalLM(config)
+result = model(input_ids, labels=input_ids)
+loss = result.loss + 0.01 * result.auxiliary_loss
+loss.backward()
+```
+
+- Labels use next-token shifting internally; label position zero is not included in the loss.
+- The returned `auxiliary_loss` is the mean layer load-balancing loss. Add it to the task loss explicitly.
+- `attention_mask` is a boolean [batch, sequence] mask. If omitted and `pad_token_id` is configured, it is inferred from input IDs.
+- `save_pretrained` / `from_pretrained` save the JSON config and PyTorch state dict.
+- This is a runnable research model, not a production training/inference runtime. It currently uses learned absolute position embeddings and the decoder mixers described above; no claim of RoPE, full Mamba selective scan, fused kernels, KV cache, distributed training, or JAX/TPU execution is made.
