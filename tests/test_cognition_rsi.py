@@ -66,7 +66,11 @@ def test_rsi_rejects_missing_guard_metric():
             score=0.8 if strategy.version > 1 else 0.5,
             cases=2, passed=2 if strategy.version > 1 else 1,
             evaluator_id="same", dataset_digest=DATASET,
-            metrics={"correctness": 0.8 if strategy.version > 1 else 0.5},
+            metrics=(
+                {"correctness": 0.5, "safety": 1.0}
+                if strategy.version == 1
+                else {"correctness": 0.8}
+            ),
         )
 
     controller = BoundedRSI(
