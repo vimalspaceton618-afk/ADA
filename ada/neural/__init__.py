@@ -26,7 +26,7 @@ def __getattr__(name: str):
 
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | _MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS)
+    return sorted(set(globals()) | _MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS | _MODEL_EXPORTS)
 
 
-__all__ = sorted(_MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS)
+__all__ = sorted(_MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS | _MODEL_EXPORTS)
