@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 torch = pytest.importorskip("torch")
-from ada.memory.neural import EnergyMemory, EnergyMemoryOutput
+from ada.memory import EnergyMemory, EnergyMemoryOutput
 
 
 def test_pdf_energy_memory_shapes_probabilities_and_gate():
