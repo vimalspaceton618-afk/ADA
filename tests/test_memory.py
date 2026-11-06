@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -103,11 +103,12 @@ def test_delete_is_terminal_and_not_retrievable():
 
 def test_expired_records_are_excluded_and_purge_marks_deleted():
     engine = MemoryEngine()
-    record = engine.remember(
-        {"text": "Expired session marker."}, kind=MemoryKind.WORKING,
-        source_kind=MemorySourceKind.USER, source_id="s1", source_digest=DIGEST,
-        expires_at=datetime.now(timezone.utc) - timedelta(seconds=10),
+    record = make_record(
+        content={"text": "Expired session marker."},
+        kind=MemoryKind.WORKING,
+        expires_at=NOW + timedelta(seconds=10),
     )
+    engine.store.put(record)
     assert engine.retrieve("session marker") == ()
     assert engine.purge_expired(at=datetime.now(timezone.utc)) == 1
     with pytest.raises(KeyError):
