@@ -11,7 +11,7 @@ The repository contains implemented research components alongside planned domain
 - `03_PERCEPTION` — source observation and modality-aware perception contracts.
 - `04_REPRESENTATION` — immutable, typed representations with source provenance.
 - `05_MEMORY` — provenance-aware record memory and differentiable associative memory.
-- `06_COGNITION` — bounded task orchestration, evidence aggregation, caller-defined planning, heuristic candidate ranking and explicit abstention.
+- `06_COGNITION` — bounded task orchestration, evidence aggregation, caller-defined planning, heuristic candidate ranking, explicit abstention, integrated subsystems and gated strategy-level RSI.
 - `07_WORLD_MODEL` — downstream world-state modelling domain; implementation status is tracked separately.
 - `09_NEURAL_SUBSTRATE` — experimental neural components and model assembly.
 
