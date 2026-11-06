@@ -112,7 +112,9 @@ class MoEEnergyMemoryFFN(nn.Module):
         self.last_aux: dict[str, Tensor] | None = None
         self.current_load_balancing_loss: Tensor | None = None
 
-    def forward(self, x: Tensor) -> tuple[Tensor, dict[str, Tensor]]:
+    def forward(
+        self, x: Tensor, *, residual: Tensor | None = None
+    ) -> tuple[Tensor, dict[str, Tensor]]:
         if not isinstance(x, Tensor):
             raise TypeError("x must be a torch.Tensor")
         if x.ndim != 3:
@@ -126,6 +128,14 @@ class MoEEnergyMemoryFFN(nn.Module):
             raise TypeError("x must use a floating-point dtype")
         if x.device != self.W_r.weight.device:
             raise ValueError("x and MoEEnergyMemoryFFN parameters must share a device")
+
+        if residual is not None:
+            if not isinstance(residual, Tensor) or residual.shape != x.shape:
+                raise ValueError("residual must be a tensor with the same shape as x")
+            if residual.device != x.device:
+                raise ValueError("residual and x must share a device")
+            if residual.dtype != x.dtype:
+                raise ValueError("residual and x must share a dtype")
 
         flat = x.reshape(-1, width)
         logits_det = self.W_r(flat)
@@ -182,7 +192,7 @@ class MoEEnergyMemoryFFN(nn.Module):
 
         # The PDF's FFN contract includes its own residual. Do not add one
         # again in a parent block.
-        hidden_states = x + blended
+        hidden_states = (x if residual is None else residual) + blended
 
         aux: dict[str, Tensor] = {
             "router_probs": probabilities.reshape(batch, sequence, self.num_experts),
