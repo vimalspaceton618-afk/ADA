@@ -48,9 +48,10 @@ class MemoryEngine:
             representation.to_dict(), kind=MemoryKind.SEMANTIC,
             source_kind=MemorySourceKind.REPRESENTATION,
             source_id=representation.representation_id,
-            source_digest=representation.representation_digest,
+            source_digest=representation.source_content_sha256,
             namespace=namespace, tags=tags,
             metadata={"source_input_id": representation.source_input_id,
+                      "representation_digest": representation.representation_digest,
                       "modality": representation.modality,
                       "representation_kind": representation.kind.value},
         )
