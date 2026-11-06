@@ -24,7 +24,7 @@ Each directory is an independent implementation boundary with its public v1 base
 
 The root `contracts.py` and `engine.py` define the stable cognition task/result API. `ada.cognition` is the public Python facade. Cognition can optionally use `ada.memory.MemoryEngine` and accepts typed `RepresentationResult` values from 04_REPRESENTATION.
 
-## Decision semantics
+## Integrated subsystem pipeline\n\n`analyze_cognition(result, query, ...)` runs the subsystem sequence through `CognitiveController` and returns a `CognitionAnalysis` report with stage trace, focus ranking, lexical abstractions, evidence-linked concepts and relations, supplied-edge causal reachability, explicit logical results, bounded arithmetic results, caller-proposed hypotheses, normalized candidate-score entropy, and a metacognitive audit. Structured inputs are opt-in; absent inputs produce empty outputs rather than invented facts. The pipeline does not execute plans or external tools.\n\nExample:\n\n```python\nfrom ada.cognition import CognitionEngine, CognitiveTask, analyze_cognition\n\nresult = CognitionEngine().process(\n    CognitiveTask(objective="review evidence"), retrieve_memory=False\n)\nreport = analyze_cognition(result, "review evidence")\nprint(report.audit, report.stage_trace)\n```\n\n## Decision semantics
 
 The v1 action score is a lexical heuristic over candidate terms and evidence terms, with a small explicit-constraint contribution. It is not a probability, learned reasoning score, semantic similarity metric or benchmark result. Selection requires a minimum score and margin over the runner-up. Ties and weak matches abstain.
 
