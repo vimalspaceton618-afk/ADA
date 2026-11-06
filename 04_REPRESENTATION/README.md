@@ -73,6 +73,6 @@ These boundaries are intentionally explicit because the current SigLIP image ada
 
 ## Verification
 
-The test suite covers perception handoff, fake/controlled observations, immutable payloads, schema serialization round-trips, lexical offsets, symbolic shape conversion, vector validation, temporal timestamps, explicit correlation grouping, and fail-closed output provenance.
+The integration test suite passes on Python 3.11 and 3.12 (89 tests per interpreter in GitHub Actions run #190). It covers perception handoff, controlled observations, immutable payloads, serialization round-trips, lexical offsets, symbolic shape conversion, vector validation, temporal timestamps, candidate-score bounds/preservation, explicit correlation grouping, and fail-closed output provenance.
 
 These tests do not demonstrate real model quality, calibrated confidence, semantic multimodal fusion, or spatial grounding.
