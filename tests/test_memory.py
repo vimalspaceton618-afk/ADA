@@ -106,7 +106,7 @@ def test_expired_records_are_excluded_and_purge_marks_deleted():
     record = engine.remember(
         {"text": "Expired session marker."}, kind=MemoryKind.WORKING,
         source_kind=MemorySourceKind.USER, source_id="s1", source_digest=DIGEST,
-        expires_at=NOW + timedelta(seconds=1),
+        expires_at=datetime.now(timezone.utc) + timedelta(seconds=10),
     )
     assert len(engine.retrieve("session marker")) == 1
     assert engine.retrieve("session marker", MemoryQuery()) == ()
