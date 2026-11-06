@@ -114,6 +114,8 @@ def test_image_embedding_becomes_validated_vector():
             "embedding_type": "l2_normalized_image_feature",
             "model_id": "google/siglip-base-patch16-224",
             "model_revision": "test-revision",
+            "candidate_scores": [{"label": "a cat", "sigmoid_score": 0.91}],
+            "candidate_score_semantics": "sigmoid matching scores; not calibrated probabilities",
         },
     )
     result = RepresentationEngine().transform(observed)
@@ -125,6 +127,8 @@ def test_image_embedding_becomes_validated_vector():
     assert rep.payload["dimension"] == 2
     assert rep.payload["l2_norm"] == pytest.approx(1.0)
     assert rep.metadata["model_id"] == "google/siglip-base-patch16-224"
+    assert rep.payload["candidate_scores"][0]["label"] == "a cat"
+    assert rep.payload["candidate_scores"][0]["sigmoid_score"] == pytest.approx(0.91)
 
 
 def test_audio_observation_becomes_tokens_and_timestamped_segments():
@@ -164,7 +168,7 @@ def test_video_observation_becomes_frame_vectors_and_sparse_timeline():
             "requested_sampling_interval_seconds": 5.0,
             "effective_sampling_interval_seconds": 5.0,
             "sampled_frames": [
-                {"frame_index": 0, "timestamp_seconds": 0.0, "width": 320, "height": 240, "embedding": [1.0, 0.0]},
+                {"frame_index": 0, "timestamp_seconds": 0.0, "width": 320, "height": 240, "embedding": [1.0, 0.0], "candidate_scores": [{"label": "car", "sigmoid_score": 0.77}]},
                 {"frame_index": 10, "timestamp_seconds": 5.0, "width": 320, "height": 240, "embedding": [0.0, 1.0]},
             ],
         },
@@ -182,6 +186,7 @@ def test_video_observation_becomes_frame_vectors_and_sparse_timeline():
     timeline = result.representations[-1]
     assert timeline.payload["frames"][1]["timestamp_seconds"] == 5.0
     assert timeline.metadata["temporal_reasoning"] is False
+    assert result.representations[0].payload["candidate_scores"][0]["label"] == "car"
 
 
 def test_unavailable_timestamps_fail_closed_instead_of_inventing_timeline():
@@ -351,3 +356,45 @@ def test_representation_result_checks_source_provenance():
             status=RepresentationResultStatus.COMPLETE,
             representations=(item,),
         )
+
+
+
+def test_engine_rejects_observation_status_mismatch():
+    observed = make_result(
+        Modality.TEXT,
+        extracted_text="source",
+        status=PerceptionStatus.OBSERVED,
+    )
+    inconsistent_observation = Observation(
+        modality=Modality.TEXT,
+        status=PerceptionStatus.PARTIAL,
+        summary="inconsistent",
+        source_input_id=observed.input_id,
+        content_sha256=observed.content_sha256,
+        extracted_text="source",
+    )
+    inconsistent_result = PerceptionResult(
+        input_id=observed.input_id,
+        correlation_id=None,
+        modality=Modality.TEXT,
+        status=PerceptionStatus.OBSERVED,
+        observation=inconsistent_observation,
+        content_sha256=observed.content_sha256,
+    )
+    result = RepresentationEngine().transform(inconsistent_result)
+    assert result.status is RepresentationResultStatus.FAILED
+    assert "status" in result.errors[0]
+
+
+def test_candidate_score_contract_rejects_unbounded_values():
+    observed = make_result(
+        Modality.IMAGE,
+        attributes={
+            "embedding": [1.0],
+            "embedding_dimension": 1,
+            "candidate_scores": [{"label": "class", "sigmoid_score": 1.5}],
+        },
+    )
+    result = RepresentationEngine().transform(observed)
+    assert result.status is RepresentationResultStatus.FAILED
+    assert "sigmoid_score" in result.errors[0]
