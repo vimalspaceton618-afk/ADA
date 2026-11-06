@@ -1,15 +1,56 @@
 # ADA Memory
 
-05_MEMORY/ is the canonical, provenance-aware memory boundary between representation and downstream cognition. The stable application import is `ada.memory`.
+05_MEMORY/ is ADA's memory boundary between representation and downstream cognition. The stable application import is `ada.memory`.
 
-## v1 architecture
+## Architecture
 
-- `contracts.py`: immutable memory records, namespaces, kinds, lifecycle states, provenance and query contracts.
-- `store.py`: bounded, thread-safe in-memory store with optimistic version checks and terminal deletion.
-- `retrieval.py`: deterministic lexical retrieval with namespace, kind, tag, source and lifecycle filters.
+ADA uses two complementary memory planes.
+
+### 1. Neural associative memory
+
+- `neural/energy_memory.py`: trainable Energy-Based Global Memory from the ADA source research.
+- Default memory bank: 512 learnable slots of width `dim`, initialized with normal standard deviation 0.02.
+- Associative retrieval: `scores = X @ M.T`, `attention = softmax(scores / temperature)`, `raw = attention @ M`.
+- Feature-wise gate: `gate = sigmoid(W_mem_gate(X))`; output: `gate * raw`.
+- Input/output contract: `[batch, sequence, dim]`.
+- `return_aux=True` returns output, attention, raw retrieval, and gate tensors for observability and training diagnostics.
+
+This module is the differentiable model component. The memory bank is trained by the optimizer through gradients. The source material does not specify a separate online write/erase operation, so this implementation does not invent one.
+
+### 2. Provenance-aware record memory
+
+- `contracts.py`: immutable records, namespaces, memory kinds, lifecycle, provenance and query contracts.
+- `store.py`: bounded thread-safe process-local store with optimistic versions.
+- `retrieval.py`: deterministic lexical retrieval baseline.
 - `engine.py`: record creation, representation ingestion, retrieval, archive and deletion.
 
-## Quick start
+This is a state-management plane, not the neural memory bank. It is currently volatile and process-local.
+
+## Quick start: neural memory
+
+Install the optional neural dependency:
+
+```bash
+pip install -e ".[neural]"
+```
+
+Use the associative module:
+
+```python
+import torch
+from ada.memory import EnergyMemory
+
+memory = EnergyMemory(dim=768)  # ADA source default: 512 memory slots
+x = torch.randn(2, 128, 768)
+result = memory(x, return_aux=True)
+
+y = result.output             # [2, 128, 768]
+weights = result.attention    # [2, 128, 512]
+```
+
+The module is intentionally independent of a specific transformer/MoE block. The model layer that owns the FFN decides where the memory output is fused into its hidden state.
+
+## Quick start: provenance records
 
 ```python
 from ada.memory import MemoryEngine, MemoryKind, MemorySourceKind
@@ -27,7 +68,7 @@ record = memory.remember(
 matches = memory.retrieve("verified source observation")
 ```
 
-Representation handoff:
+Representation handoff preserves the source content SHA-256 and representation metadata:
 
 ```python
 from ada.perception import Modality, PerceptionEngine, PerceptionInput
@@ -43,19 +84,27 @@ for item in projected.representations:
     memory.remember_representation(item, namespace="default")
 ```
 
-## Invariants and safety
+## Research references and design boundaries
 
-- Every record carries a source kind, source ID and lowercase SHA-256 source digest.
-- Content and metadata are finite JSON-compatible values, deeply immutable after construction.
-- Namespace isolation is enforced by every list and retrieval operation.
-- Retrieval excludes expired and deleted records; archived records require explicit opt-in.
-- Updates support optimistic version checks to prevent lost updates.
-- Deletion is a terminal tombstone; v1 does not silently restore deleted records.
-- Expiry is enforced during retrieval and can be physically marked deleted with `purge_expired()`.
-- No automatic extraction, fact inference, summarization, embedding, or semantic similarity is claimed.
+- ADA source research (`Ada-src.pdf`): 512-slot associative Energy Memory, temperature-scaled softmax retrieval, feature-wise sigmoid gate.
+- [Tencent Hy-Memory](https://github.com/Tencent-Hunyuan/Hy-Memory) and [Hy-Memory-30B-A3B](https://huggingface.co/tencent/Hy-Memory-30B-A3B): useful research on learned memory writing, state revision and cross-harness memory policies. The 30B-A3B writer is not a runtime dependency and is not copied into this repository.
+- [R^3Mem](https://huggingface.co/papers/2502.15957): research direction for reversible context compression and hierarchical memory tokens; not implemented in this milestone.
+- [S^3-Attention](https://huggingface.co/papers/2601.17702): research direction for memory-bounded long-context retrieval; not implemented in this milestone.
+- [SYNAPSE](https://huggingface.co/papers/2601.02744): graph/spreading-activation direction for future associative episodic-semantic retrieval; not implemented in this milestone.
 
-## Explicit v1 limits
+## Invariants and current limits
 
-The store is process-local and volatile. It is not a database, vector index, distributed cache, durable event log, or encrypted-at-rest persistence layer. Restarting the process loses records. Lexical retrieval is a baseline, not semantic retrieval. Knowledge-graph edges, associative traversal, episodic reconstruction, procedural execution, consolidation policies and learned memory ranking are deferred. The corresponding scaffold directories are extension boundaries, not implemented features.
+- Record memory carries source kind, source ID and lowercase SHA-256 source digest.
+- Record content and metadata are finite JSON-compatible values and deeply immutable.
+- Namespace isolation is applied to record listing and retrieval.
+- Record retrieval excludes expired and deleted records; archived records require explicit opt-in.
+- Optimistic version checks are available for record updates.
+- Deleted records are terminal tombstones.
+- No automatic fact inference, summarization, external persistence or semantic retrieval is claimed.
+- The neural bank is a learned model parameter; record-store contents do not automatically modify the neural bank.
 
-No mandatory third-party dependency is introduced.
+## Deferred work
+
+Durable database adapters, vector/ANN search, learned memory writing, conflict-aware consolidation, graph construction, spreading activation, episodic reconstruction, procedural execution, memory decay, and end-to-end MoE/FFN fusion require separate implementations and tests. These are not implied by the neural read path or the current record store.
+
+No mandatory third-party dependency is introduced. PyTorch remains optional under the existing `neural` extra.
