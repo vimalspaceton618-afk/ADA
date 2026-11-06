@@ -38,4 +38,4 @@
 
 ## Verification
 
-CI is authoritative. Do not mark this milestone verified until a GitHub Actions run against the final commit SHA completes successfully for every configured Python version. Previous runs failed in the test-suite step; see the current Actions page before relying on status.
+Verified on commit `12c2723e7f4bf0593df0417b78ab576abbfea1b0`: [GitHub Actions run #230](https://github.com/vimalspaceton618-afk/ADA/actions/runs/42172158875) passed on Python 3.11 and 3.12 (110 tests passed in each job). This verification applies to the code and tests at that commit; later code changes require a new green run.
