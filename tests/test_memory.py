@@ -148,3 +148,4 @@ def test_representation_handoff_preserves_source_digest():
     assert stored
     assert all(item.source_digest == rep.source_content_sha256 for item, rep in zip(stored, projected.representations))
     assert all(item.metadata["source_input_id"] == source.input_id for item in stored)
+    assert all(item.metadata["representation_digest"] == rep.representation_digest for item, rep in zip(stored, projected.representations))
