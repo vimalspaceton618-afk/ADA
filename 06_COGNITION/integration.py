@@ -102,8 +102,17 @@ def analyze_cognition(
         return {**ctx, "calculations": values}
 
     def hypothesis_stage(ctx):
-        values = tuple(hypothesis_generation.propose(*item) for item in hypotheses)
-        return {**ctx, "hypotheses": values}
+        values = []
+        for item in hypotheses:
+            if not isinstance(item, (tuple, list)) or not 1 <= len(item) <= 3:
+                raise ValueError("each hypothesis must contain statement and optional supporting/missing evidence")
+            statement = item[0]
+            supporting = item[1] if len(item) >= 2 else ()
+            missing = item[2] if len(item) == 3 else ()
+            values.append(hypothesis_generation.propose(
+                statement, supporting_evidence=supporting, missing_evidence=missing
+            ))
+        return {**ctx, "hypotheses": tuple(values)}
 
     def uncertainty_stage(ctx):
         scores = tuple(score for _, score in result.decision.candidate_scores)
