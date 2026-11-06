@@ -12,7 +12,7 @@ import hashlib
 import json
 import math
 import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Callable, Iterable, Mapping
 
@@ -34,7 +34,7 @@ class StrategyArtifact:
     created_at: str = ""
 
     def __post_init__(self):
-        if not self.strategy_id.strip():
+        if not isinstance(self.strategy_id, str) or not self.strategy_id.strip():
             raise ValueError("strategy_id is required")
         if type(self.version) is not int or self.version < 1:
             raise ValueError("version must be a positive integer")
@@ -70,7 +70,7 @@ class Evaluation:
             raise ValueError("cases must be positive")
         if type(self.passed) is not int or not 0 <= self.passed <= self.cases:
             raise ValueError("passed must be within cases")
-        if not self.evaluator_id.strip() or not self.dataset_digest.strip():
+        if not isinstance(self.evaluator_id, str) or not self.evaluator_id.strip() or not isinstance(self.dataset_digest, str) or not self.dataset_digest.strip():
             raise ValueError("evaluator_id and dataset_digest are required")
         for key, value in self.metrics.items():
             if not isinstance(key, str) or not math.isfinite(float(value)):
