@@ -21,7 +21,7 @@ perception-audio = ["torch>=2.2", "transformers>=4.44", "numpy>=1.24", "soundfil
 perception-video = ["av>=12.0", "Pillow>=10"]
 
 [tool.setuptools.packages.find]
-include = ["ada*", "02_CORE_RUNTIME*", "03_PERCEPTION*"]
+include = ["ada*", "02_CORE_RUNTIME*", "03_PERCEPTION*", "04_REPRESENTATION*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
