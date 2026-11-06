@@ -17,7 +17,7 @@ from .vector_representation.vector import validate_vector
 
 
 class RepresentationAdapter(Protocol):
-    modality: Any
+    modality_value: str
 
     def represent(self, result: Any) -> tuple[Representation, ...]:
         """Create zero or more provenance-preserving representations."""
@@ -191,7 +191,9 @@ class VideoRepresentationAdapter:
 
         for frame in frames:
             embedding = frame.get("embedding")
-            vector, norm = validate_vector(embedding if isinstance(embedding, (list, tuple)) else ())
+            vector, norm = validate_vector(
+                embedding if isinstance(embedding, (list, tuple)) else ()
+            )
             frame_index = frame.get("frame_index")
             if type(frame_index) is not int or frame_index < 0:
                 raise ValueError("video frame_index must be a non-negative integer")
