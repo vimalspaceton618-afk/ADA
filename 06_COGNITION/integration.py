@@ -51,6 +51,9 @@ def analyze_cognition(
       arithmetic: (left_number, operator, right_number)
       hypotheses: (statement[, supporting_evidence[, missing_evidence]])
     """
+    from .contracts import CognitiveResult, EvidenceItem
+    if not isinstance(result, CognitiveResult):
+        raise TypeError("result must be a CognitiveResult")
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
 
@@ -60,7 +63,10 @@ def analyze_cognition(
     logical_premises = tuple(logical_premises)
     arithmetic = tuple(arithmetic)
     hypotheses = tuple(hypotheses)
-    evidence_texts = tuple(item.content for item in result.evidence)
+    evidence_items = tuple(result.evidence)
+    if any(not isinstance(item, EvidenceItem) for item in evidence_items):
+        raise TypeError("result.evidence must contain EvidenceItem values")
+    evidence_texts = tuple(item.content for item in evidence_items)
     focus_items = tuple((item.evidence_id, item.content) for item in result.evidence)
 
     def attention_stage(ctx):
@@ -83,7 +89,7 @@ def analyze_cognition(
         values = ()
         if causal_source is not None:
             values = causal_reasoning.causal_reachability(causal_edges, causal_source)
-        elif tuple(causal_edges):
+        elif causal_edges:
             raise ValueError("causal_source is required when causal_edges are supplied")
         return {**ctx, "causal_reachable": values}
 
@@ -96,8 +102,17 @@ def analyze_cognition(
         return {**ctx, "calculations": values}
 
     def hypothesis_stage(ctx):
-        values = tuple(hypothesis_generation.propose(*item) for item in hypotheses)
-        return {**ctx, "hypotheses": values}
+        values = []
+        for item in hypotheses:
+            if not isinstance(item, (tuple, list)) or not 1 <= len(item) <= 3:
+                raise ValueError("each hypothesis must contain statement and optional supporting/missing evidence")
+            statement = item[0]
+            supporting = item[1] if len(item) >= 2 else ()
+            missing = item[2] if len(item) == 3 else ()
+            values.append(hypothesis_generation.propose(
+                statement, supporting_evidence=supporting, missing_evidence=missing
+            ))
+        return {**ctx, "hypotheses": tuple(values)}
 
     def uncertainty_stage(ctx):
         scores = tuple(score for _, score in result.decision.candidate_scores)

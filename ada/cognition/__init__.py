@@ -14,7 +14,16 @@ CognitionEngine = _module.CognitionEngine
 CognitionAnalysis = _module.CognitionAnalysis
 analyze_cognition = _module.analyze_cognition
 
-# Expose the eleven cognition subsystems through the stable ada.cognition facade.
+
+# Bounded recursive self-improvement strategy controller.
+recursive_self_improvement = import_module("06_COGNITION.recursive_self_improvement")
+BoundedRSI = recursive_self_improvement.BoundedRSI
+StrategyArtifact = recursive_self_improvement.StrategyArtifact
+Evaluation = recursive_self_improvement.Evaluation
+RSIResult = recursive_self_improvement.RSIResult
+ImprovementRecord = recursive_self_improvement.ImprovementRecord
+
+# Expose the cognition subsystems through the stable ada.cognition facade.
 _SUBSYSTEMS = (
     "cognitive_controller", "attention_mechanism", "abstraction_engine",
     "concept_formation", "relationship_engine", "causal_reasoning",
@@ -27,5 +36,5 @@ for _name in _SUBSYSTEMS:
 __all__ = [
     "SCHEMA_VERSION", "CognitiveDecision", "CognitiveResult",
     "CognitiveStatus", "CognitiveTask", "DecisionStatus", "EvidenceItem",
-    "PlanStep", "CognitionEngine", "CognitionAnalysis", "analyze_cognition", *_SUBSYSTEMS,
+    "PlanStep", "CognitionEngine", "CognitionAnalysis", "analyze_cognition", "recursive_self_improvement", "BoundedRSI", "StrategyArtifact", "Evaluation", "RSIResult", "ImprovementRecord", *_SUBSYSTEMS,
 ]

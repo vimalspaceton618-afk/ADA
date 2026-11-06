@@ -25,6 +25,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install test dependencies
-        run: python -m pip install --upgrade pip && python -m pip install torch --index-url https://download.pytorch.org/whl/cpu && python -m pip install -e ".[dev,yaml]"
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,yaml]"
       - name: Run test suite
         run: python -m pytest -q
+      - name: Compile cognition modules
+        run: python -m compileall -q 06_COGNITION ada/cognition
