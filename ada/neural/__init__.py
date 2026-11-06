@@ -16,6 +16,9 @@ def __getattr__(name: str):
             "09_NEURAL_SUBSTRATE.expert_systems.moe_energy_memory"
         )
         value = getattr(module, name)
+    elif name in _DECODER_EXPORTS:
+        module = import_module("09_NEURAL_SUBSTRATE.neural_core.decoder_block")
+        value = getattr(module, name)
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
     globals()[name] = value
