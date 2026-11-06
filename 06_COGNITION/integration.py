@@ -54,6 +54,12 @@ def analyze_cognition(
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must be a non-empty string")
 
+    concepts = tuple(concepts)
+    relations = tuple(relations)
+    causal_edges = tuple(causal_edges)
+    logical_premises = tuple(logical_premises)
+    arithmetic = tuple(arithmetic)
+    hypotheses = tuple(hypotheses)
     evidence_texts = tuple(item.content for item in result.evidence)
     focus_items = tuple((item.evidence_id, item.content) for item in result.evidence)
 
