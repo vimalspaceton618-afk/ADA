@@ -141,6 +141,10 @@ class ActionConditionedJEPA(nn.Module):
             raise ValueError("predictions and target_latents must share [B,T,D] shape")
         if not torch.isfinite(predictions).all() or not torch.isfinite(target_latents).all():
             raise ValueError("JEPA latents must be finite")
+        if isinstance(variance_floor, bool) or not isinstance(variance_floor, (int, float)):
+            raise TypeError("variance_floor must be numeric")
+        if not torch.isfinite(torch.tensor(float(variance_floor))) or variance_floor < 0:
+            raise ValueError("variance_floor must be finite and non-negative")
         target = target_latents.detach()
         per_token = 1.0 - F.cosine_similarity(predictions, target, dim=-1)
         regression = F.smooth_l1_loss(predictions, target, reduction="none").mean(-1)
