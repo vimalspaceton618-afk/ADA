@@ -3,7 +3,7 @@ import pytest
 torch = pytest.importorskip("torch")
 from torch import nn
 
-from ada.world_model.environment_model import RecurrentStateSpaceModel, RSSMWorldModel
+from ada.world_model.environment_model import RSSMState, RecurrentStateSpaceModel, RSSMWorldModel
 from ada.world_model.predictive_engine import ActionConditionedJEPA, EMATargetEncoder, CEMPlanner
 from ada.world_model.simulation_engine import compare_rollouts
 
@@ -16,12 +16,12 @@ def test_rssm_observe_and_imagine_shapes():
     sequence = model.observe_sequence(observations, actions, sample=False)
     assert sequence.posterior.deterministic.shape == (2, 6, 16)
     assert sequence.posterior.stochastic.shape == (2, 6, 4, 5)
-    imagined = model.imagine(sequence.posterior.features[:, -1] if False else
-                             type(sequence.posterior)(
-                                 sequence.posterior.deterministic[:, -1],
-                                 sequence.posterior.stochastic[:, -1],
-                                 sequence.posterior.logits[:, -1],
-                             ), torch.randn(2, 4, 3), sample=False)
+    initial = RSSMState(
+        sequence.posterior.deterministic[:, -1],
+        sequence.posterior.stochastic[:, -1],
+        sequence.posterior.logits[:, -1],
+    )
+    imagined = model.imagine(initial, torch.randn(2, 4, 3), sample=False)
     assert imagined.deterministic.shape == (2, 4, 16)
 
 
@@ -98,6 +98,8 @@ def test_cem_planner_respects_action_bounds():
     assert result.first_action is not None
     assert torch.all(result.action_sequence <= 1.0)
     assert torch.all(result.action_sequence >= -1.0)
+    from ada.world_model import RecurrentStateSpaceModel as PublicRSSM
+    assert PublicRSSM is RecurrentStateSpaceModel
 
 
 def test_cem_infeasible_cost_returns_no_action():
