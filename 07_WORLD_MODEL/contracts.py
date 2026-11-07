@@ -224,6 +224,11 @@ class WorldPrediction:
         if any(not isinstance(x, WorldFact) for x in facts):
             raise TypeError("predicted_facts must contain WorldFact values")
         object.__setattr__(self, "predicted_facts", facts)
+        if self.status is PredictionStatus.PREDICTED:
+            if not facts or not self.rule_id:
+                raise ValueError("predicted outcomes require facts and a rule_id")
+        elif facts or self.rule_id is not None:
+            raise ValueError("abstained predictions cannot carry facts or a rule_id")
 
 @dataclass(frozen=True, slots=True)
 class SimulationResult:
