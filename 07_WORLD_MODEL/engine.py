@@ -1,5 +1,6 @@
 """Bounded, evidence-grounded world state and counterfactual prediction."""
 from datetime import timedelta
+import math
 from typing import Iterable
 from .contracts import (
     FactCondition, PredictionStatus, SimulationResult, TransitionRule,
@@ -43,7 +44,11 @@ class WorldModelEngine:
             raise ValueError("a fact cannot be observed after the snapshot timestamp")
         latest = {(x.subject_id, x.predicate): x for x in self._current.active_facts()}
         for item in incoming:
-            latest[(item.subject_id, item.predicate)] = item
+            key = (item.subject_id, item.predicate)
+            previous = latest.get(key)
+            if previous is not None and item.observed_at < previous.observed_at:
+                raise ValueError("stale observations cannot overwrite newer facts")
+            latest[key] = item
         snapshot = WorldSnapshot(tuple(latest.values()), timestamp=timestamp)
         self._current = snapshot
         self._history.append(snapshot)
@@ -68,8 +73,8 @@ class WorldModelEngine:
             raise TypeError("action must be a WorldAction")
         if isinstance(horizon_seconds, bool) or not isinstance(horizon_seconds, (int, float)):
             raise TypeError("horizon_seconds must be numeric")
-        if horizon_seconds <= 0:
-            raise ValueError("horizon_seconds must be positive")
+        if not math.isfinite(float(horizon_seconds)) or horizon_seconds <= 0:
+            raise ValueError("horizon_seconds must be finite and positive")
         candidates = tuple(x for x in rules if isinstance(x, TransitionRule)
                            and x.action_type == action.action_type)
         if not candidates:
@@ -107,8 +112,16 @@ class WorldModelEngine:
         prediction = self.predict(action, rules, horizon_seconds=horizon_seconds)
         future = None
         if prediction.status is PredictionStatus.PREDICTED:
+            # Predicted effects replace the same state slots in the hypothetical
+            # future; the historical snapshot and live engine remain untouched.
+            future_facts = {
+                (item.subject_id, item.predicate): item
+                for item in self._current.active_facts()
+            }
+            for item in prediction.predicted_facts:
+                future_facts[(item.subject_id, item.predicate)] = item
             future = WorldSnapshot(
-                facts=(*self._current.active_facts(), *prediction.predicted_facts),
+                facts=tuple(future_facts.values()),
                 timestamp=self._current.timestamp + timedelta(seconds=float(horizon_seconds)),
             )
         return SimulationResult(prediction, future)
