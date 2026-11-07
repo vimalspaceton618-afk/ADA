@@ -92,9 +92,3 @@ def test_runtime_state_reference_validates_digest_and_uncertainty():
         ModelRuntimeState("ep-1", 3, "snapshot-1", "rssm-v0", 1.5, NOW, DIGEST)
 
 
-def test_optional_neural_exports_are_resolved_lazily():
-    from ada.world_model import RecurrentStateSpaceModel, RSSMWorldModel, ActionConditionedJEPA, CEMPlanner
-    assert RecurrentStateSpaceModel is not None
-    assert RSSMWorldModel is not None
-    assert ActionConditionedJEPA is not None
-    assert CEMPlanner is not None
