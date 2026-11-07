@@ -12,18 +12,19 @@ class EmpiricalActionPrior:
             raise ValueError("smoothing must be non-negative")
         self.smoothing = float(smoothing)
         self._counts: dict[str, Counter[str]] = {}
-        self._observed_sources: set[tuple[str, str]] = set()
+        self._observed_events: set[tuple[str, str, str, str, str]] = set()
         self.update(events)
 
     def update(self, events: Iterable[ObservedBehaviorEvent]) -> None:
         for event in events:
             if not isinstance(event, ObservedBehaviorEvent):
                 raise TypeError("events must contain ObservedBehaviorEvent values")
-            source_key = (event.source_id, event.source_digest)
-            if source_key in self._observed_sources:
+            event_key = (event.actor_ref, event.action_label, event.context_label,
+                         event.observed_at.isoformat(), event.source_id + ":" + event.source_digest)
+            if event_key in self._observed_events:
                 continue
             self._counts.setdefault(event.context_label, Counter())[event.action_label] += 1
-            self._observed_sources.add(source_key)
+            self._observed_events.add(event_key)
 
     def distribution(self, context_label: str) -> dict[str, float]:
         if not isinstance(context_label, str) or not context_label.strip():
