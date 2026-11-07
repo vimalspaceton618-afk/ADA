@@ -33,7 +33,7 @@ class PhysicalState:
             object.__setattr__(self, name, _triple(getattr(self, name), name))
         if not isinstance(self.observed_at, datetime) or self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
             raise ValueError("observed_at must be timezone-aware")
-        if self.source_digest and (
-            len(self.source_digest) != 64 or any(c not in "0123456789abcdef" for c in self.source_digest)
+        if not isinstance(self.source_digest, str) or len(self.source_digest) != 64 or any(
+            c not in "0123456789abcdef" for c in self.source_digest
         ):
             raise ValueError("source_digest must be a lowercase SHA-256 digest")
