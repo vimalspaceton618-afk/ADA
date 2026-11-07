@@ -29,4 +29,4 @@ jobs:
       - name: Run test suite
         run: python -m pytest -q
       - name: Compile cognition modules
-        run: python -m compileall -q 06_COGNITION ada/cognition
+        run: python -m compileall -q 06_COGNITION 07_WORLD_MODEL ada/cognition ada/world_model
