@@ -51,6 +51,13 @@ def test_observe_rejects_non_monotonic_or_future_fact():
     with pytest.raises(ValueError):
         engine.observe((fact(at=NOW + timedelta(seconds=5)),), at=NOW)
 
+def test_stale_observation_cannot_overwrite_newer_state():
+    engine = WorldModelEngine(WorldSnapshot((fact("on", at=NOW + timedelta(seconds=2)),),
+                                             timestamp=NOW + timedelta(seconds=2)))
+    with pytest.raises(ValueError):
+        engine.observe((fact("off", at=NOW + timedelta(seconds=1)),),
+                       at=NOW + timedelta(seconds=3))
+
 def test_prediction_requires_rule_and_satisfied_preconditions():
     engine = WorldModelEngine(WorldSnapshot((fact(),), timestamp=NOW))
     action = WorldAction("switch_on", "lamp")
@@ -79,6 +86,9 @@ def test_simulation_isolated_from_live_state_and_history():
     digest, history = engine.current.digest, engine.history
     result = engine.simulate(WorldAction("switch_on", "lamp"), [rule()], horizon_seconds=3)
     assert result.future_snapshot.timestamp == NOW + timedelta(seconds=3)
+    future_power = [x for x in result.future_snapshot.active_facts()
+                    if x.subject_id == "lamp" and x.predicate == "power"]
+    assert len(future_power) == 1 and future_power[0].value == "on"
     assert engine.current.digest == digest and engine.history == history
     assert engine.current.active_facts()[0].value == "off"
 
