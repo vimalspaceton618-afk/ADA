@@ -164,8 +164,14 @@ class RecurrentStateSpaceModel(nn.Module):
                 reset = is_first[:, t].unsqueeze(-1)
                 fresh = self.initial_state(batch, device=state.deterministic.device,
                                            dtype=state.deterministic.dtype)
-                state = RSSMState(*(torch.where(reset, a, b) for a, b in zip(fresh, state)))
+                state = RSSMState(
+                    torch.where(reset, fresh.deterministic, state.deterministic),
+                    torch.where(reset.unsqueeze(-1), fresh.stochastic, state.stochastic),
+                    torch.where(reset.unsqueeze(-1), fresh.logits, state.logits),
+                )
             action = zero_action if t == 0 else actions[:, t - 1]
+            if is_first is not None:
+                action = torch.where(is_first[:, t].unsqueeze(-1), zero_action, action)
             state, prior = self.observe_step(state, action, observation_embeddings[:, t], sample=sample)
             posterior_states.append(state)
             prior_states.append(prior)
