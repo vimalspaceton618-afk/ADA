@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import threading
 
 from ..contracts import (
-    LearningArtifact, LearningDecision, LearningProposal, MetricSet,
+    ArtifactStatus, LearningArtifact, LearningDecision, LearningProposal, MetricSet,
 )
 from ..learning_evaluation.gates import RegressionGate
 
@@ -87,22 +87,18 @@ class LearningController:
             parent_digest=parent.artifact_digest, candidate_digest=candidate.artifact_digest,
             baseline_metrics_digest=baseline.digest, candidate_metrics_digest=evaluation.digest,
         )
-        if result.accepted:
-            promoted = LearningArtifact(
-                target=candidate.target, version=candidate.version,
-                artifact_digest=candidate.artifact_digest, parent_digest=candidate.parent_digest,
-                metadata=candidate.metadata, status=__import__(
-                    "08_LEARNING.contracts", fromlist=["ArtifactStatus"]
-                ).ArtifactStatus.PROMOTED,
-                artifact_id=candidate.artifact_id, created_at=candidate.created_at,
-            )
-        else:
-            promoted = candidate
-        attempt = LearningAttempt(proposal, promoted, baseline, evaluation, decision)
+        finalized = LearningArtifact(
+            target=candidate.target, version=candidate.version,
+            artifact_digest=candidate.artifact_digest, parent_digest=candidate.parent_digest,
+            metadata=candidate.metadata,
+            status=ArtifactStatus.PROMOTED if result.accepted else ArtifactStatus.REJECTED,
+            artifact_id=candidate.artifact_id, created_at=candidate.created_at,
+        )
+        attempt = LearningAttempt(proposal, finalized, baseline, evaluation, decision)
         with self._lock:
             if self._active.artifact_digest != parent.artifact_digest:
                 raise RuntimeError("active artifact changed during evaluation; refusing stale promotion")
             self._history.append(attempt)
             if result.accepted:
-                self._active = promoted
+                self._active = finalized
         return attempt
