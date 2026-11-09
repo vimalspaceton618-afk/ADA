@@ -95,3 +95,26 @@ loss.backward()
 - `attention_mask` is a boolean [batch, sequence] mask. If omitted and `pad_token_id` is configured, it is inferred from input IDs.
 - `save_pretrained` / `from_pretrained` save the JSON config and PyTorch state dict.
 - This is a runnable research model, not a production training/inference runtime. It currently uses learned absolute position embeddings and the decoder mixers described above; no claim of RoPE, full Mamba selective scan, fused kernels, KV cache, distributed training, or JAX/TPU execution is made.
+
+
+## Chunked SSD reference core
+
+Canonical module: `neural_core/ssd_reference.py`
+
+The public `ada.neural.ssd_minimal_discrete` function implements the readable
+four-stage discrete SSD factorization: intra-chunk output, chunk-state
+summaries, inter-chunk state propagation, and state-to-output conversion.
+It supports grouped B/C inputs when the head count is divisible by the group
+count, optional initial states, and returns both sequence outputs and the
+final recurrent state.
+
+The function accepts **already discretized** `X` and `A` tensors. It does
+not perform Mamba-2's input projection, causal convolution, timestep
+parameterization, gated normalization, or output projection. It is a
+correctness/reference core, not a fused scan or complete Mamba-2 mixer.
+Its structure follows the official reference Listing 1:
+https://github.com/state-spaces/mamba/blob/main/mamba_ssm/modules/ssd_minimal.py
+
+The reference tests compare chunked outputs and final states against a
+token-by-token recurrence, check future-token causality, and verify gradients.
+They run in the CPU-PyTorch CI job.
