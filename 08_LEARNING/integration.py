@@ -118,6 +118,31 @@ def from_episode_window(
     )
 
 
+
+def from_cognitive_result(result: Any, *, domain: str) -> tuple[ExperienceRecord, ...]:
+    """Adapt all evidence from one completed Cognition result."""
+    from importlib import import_module
+    contracts = import_module("06_COGNITION.contracts")
+    if not isinstance(result, contracts.CognitiveResult):
+        raise TypeError("result must be a 06_COGNITION CognitiveResult")
+    return tuple(
+        from_cognitive_evidence(item, domain=domain, task_id=result.task_id)
+        for item in result.evidence
+    )
+
+
+def from_memory_search_results(results: Iterable[Any], *, domain: str, task_id: str) -> tuple[ExperienceRecord, ...]:
+    """Adapt MemorySearchResult values while retaining source record provenance."""
+    from importlib import import_module
+    contracts = import_module("05_MEMORY.contracts")
+    adapted = []
+    for result in results:
+        if not isinstance(result, contracts.MemorySearchResult):
+            raise TypeError("results must contain MemorySearchResult values")
+        adapted.append(from_memory_record(result.record, domain=domain, task_id=task_id))
+    return tuple(adapted)
+
+
 class LearningIntegration:
     """Small explicit handoff coordinator for validated learning evidence."""
 
