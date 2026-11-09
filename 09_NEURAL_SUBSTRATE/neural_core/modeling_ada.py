@@ -42,12 +42,18 @@ class ADAConfig:
     dropout: float = 0.0
     pad_token_id: int | None = None
     tie_embeddings: bool = True
+    mixer_backend: str = "pdf_conv"
+    mamba2_d_state: int = 64
+    mamba2_headdim: int = 64
+    mamba2_ngroups: int = 1
+    mamba2_chunk_size: int = 64
 
     def __post_init__(self) -> None:
         positive = (
             "vocab_size", "dim", "n_layers", "n_heads", "attention_rank",
             "max_seq_len", "num_experts", "num_slots", "expansion_factor",
-            "mixer_expand", "mixer_kernel_size",
+            "mixer_expand", "mixer_kernel_size", "mamba2_d_state",
+            "mamba2_headdim", "mamba2_ngroups", "mamba2_chunk_size",
         )
         for name in positive:
             value = getattr(self, name)
@@ -68,6 +74,21 @@ class ADAConfig:
                 raise ValueError("pad_token_id must be in [0, vocab_size)")
         if type(self.tie_embeddings) is not bool:
             raise TypeError("tie_embeddings must be a bool")
+        if self.mixer_backend not in {"pdf_conv", "mamba2_reference"}:
+            raise ValueError(
+                "mixer_backend must be 'pdf_conv' or 'mamba2_reference'"
+            )
+        if self.mixer_backend == "mamba2_reference":
+            inner_width = self.dim * self.mixer_expand
+            if inner_width % self.mamba2_headdim:
+                raise ValueError(
+                    "dim * mixer_expand must be divisible by mamba2_headdim"
+                )
+            ssm_heads = inner_width // self.mamba2_headdim
+            if ssm_heads % self.mamba2_ngroups:
+                raise ValueError(
+                    "mamba2_ngroups must divide the number of Mamba-2 SSM heads"
+                )
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -117,6 +138,11 @@ class ADAForCausalLM(nn.Module):
                 expansion_factor=config.expansion_factor,
                 temperature=config.temperature,
                 dropout=config.dropout,
+                mixer_backend=config.mixer_backend,
+                mamba2_d_state=config.mamba2_d_state,
+                mamba2_headdim=config.mamba2_headdim,
+                mamba2_ngroups=config.mamba2_ngroups,
+                mamba2_chunk_size=config.mamba2_chunk_size,
             )
             for index in range(config.n_layers)
         ])

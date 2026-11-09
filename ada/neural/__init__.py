@@ -7,6 +7,7 @@ _SSD_EXPORTS = {"segment_sum", "ssd_minimal_discrete"}
 _MEMORY_EXPORTS = {"EnergyMemory", "EnergyMemoryOutput"}
 _EXPERT_EXPORTS = {"ExactGLUExpert", "MoEEnergyMemoryFFN"}
 _DECODER_EXPORTS = {"ADADecoderBlock", "Mamba2SSD", "RMSNorm", "TensorNetAttention"}
+_MAMBA_EXPORTS = {"Mamba2ReferenceMixer"}
 _MODEL_EXPORTS = {"ADAConfig", "ADAForCausalLM", "ADAOutput"}
 
 
@@ -17,6 +18,8 @@ def __getattr__(name: str):
         module = import_module("09_NEURAL_SUBSTRATE.expert_systems.moe_energy_memory")
     elif name in _DECODER_EXPORTS:
         module = import_module("09_NEURAL_SUBSTRATE.neural_core.decoder_block")
+    elif name in _MAMBA_EXPORTS:
+        module = import_module("09_NEURAL_SUBSTRATE.neural_core.mamba2_reference")
     elif name in _MODEL_EXPORTS:
         module = import_module("09_NEURAL_SUBSTRATE.neural_core.modeling_ada")
     elif name in _SSD_EXPORTS:
@@ -34,11 +37,12 @@ def __dir__() -> list[str]:
         | _MEMORY_EXPORTS
         | _EXPERT_EXPORTS
         | _DECODER_EXPORTS
+        | _MAMBA_EXPORTS
         | _MODEL_EXPORTS
         | _SSD_EXPORTS
     )
 
 
 __all__ = sorted(
-    _MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS | _MODEL_EXPORTS | _SSD_EXPORTS
+    _MEMORY_EXPORTS | _EXPERT_EXPORTS | _DECODER_EXPORTS | _MAMBA_EXPORTS | _MODEL_EXPORTS | _SSD_EXPORTS
 )

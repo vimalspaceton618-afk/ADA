@@ -6,9 +6,11 @@ from .decoder_block import (
     RMSNorm,
     TensorNetAttention,
 )
+from .mamba2_reference import Mamba2ReferenceMixer
 
 __all__ = [
     "ADADecoderBlock",
+    "Mamba2ReferenceMixer",
     "Mamba2SSD",
     "RMSNorm",
     "TensorNetAttention",

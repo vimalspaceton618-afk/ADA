@@ -21,6 +21,7 @@ try:
     from torch import Tensor, nn
     from torch.nn import functional as F
     from ada.neural import MoEEnergyMemoryFFN
+from .mamba2_reference import Mamba2ReferenceMixer
 except ImportError as exc:  # pragma: no cover - optional neural dependency
     raise ImportError(
         "ADA decoder blocks require PyTorch; install ADA with the neural extra."
@@ -194,22 +195,38 @@ class ADADecoderBlock(nn.Module):
         expansion_factor: int = 4,
         temperature: float = 0.1,
         dropout: float = 0.0,
+        mixer_backend: str = "pdf_conv",
+        mamba2_d_state: int = 64,
+        mamba2_headdim: int = 64,
+        mamba2_ngroups: int = 1,
+        mamba2_chunk_size: int = 64,
     ) -> None:
         super().__init__()
         if type(layer_idx) is not int or layer_idx < 0:
             raise ValueError("layer_idx must be a non-negative integer")
+        if mixer_backend not in {"pdf_conv", "mamba2_reference"}:
+            raise ValueError("mixer_backend must be 'pdf_conv' or 'mamba2_reference'")
 
         self.dim = dim
         self.layer_idx = layer_idx
-        self.mixer_type = "mamba2_conv" if layer_idx % 2 == 0 else "tensornet_causal_attention"
-        self.norm1 = RMSNorm(dim)
-        self.mixer = (
-            Mamba2SSD(dim, expand=mixer_expand, kernel_size=mixer_kernel_size)
-            if layer_idx % 2 == 0
-            else TensorNetAttention(
+        if layer_idx % 2 == 0 and mixer_backend == "mamba2_reference":
+            self.mixer_type = "mamba2_ssd_reference"
+            self.mixer = Mamba2ReferenceMixer(
+                dim, d_state=mamba2_d_state, d_conv=mixer_kernel_size,
+                expand=mixer_expand, headdim=mamba2_headdim,
+                ngroups=mamba2_ngroups, chunk_size=mamba2_chunk_size,
+            )
+        elif layer_idx % 2 == 0:
+            self.mixer_type = "mamba2_conv"
+            self.mixer = Mamba2SSD(
+                dim, expand=mixer_expand, kernel_size=mixer_kernel_size
+            )
+        else:
+            self.mixer_type = "tensornet_causal_attention"
+            self.mixer = TensorNetAttention(
                 dim, n_heads, rank=attention_rank, dropout=dropout
             )
-        )
+        self.norm1 = RMSNorm(dim)
         self.norm2 = RMSNorm(dim)
         self.ffn = MoEEnergyMemoryFFN(
             d_model=dim,
