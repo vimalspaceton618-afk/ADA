@@ -7,6 +7,7 @@ from .contracts import (
 from .experience_learning.ledger import ExperienceLedger
 from .learning_controller.controller import LearningAttempt, LearningController
 from .learning_evaluation.gates import GateResult, MetricPolicy, RegressionGate
+from .integration import LearningIntegration, from_cognitive_evidence, from_episode_window, from_memory_record
 from .replay_mechanism.buffer import ReplayBuffer
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "ExperienceStatus", "LearningArtifact", "LearningDecision", "LearningProposal",
     "MetricSet", "OutcomeKind", "ExperienceLedger", "LearningAttempt",
     "LearningController", "GateResult", "MetricPolicy", "RegressionGate",
-    "ReplayBuffer",
+    "ReplayBuffer", "LearningIntegration", "from_memory_record",
+    "from_cognitive_evidence", "from_episode_window",
 ]
