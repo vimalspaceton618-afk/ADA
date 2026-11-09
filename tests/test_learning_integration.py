@@ -104,3 +104,37 @@ def test_learning_integration_rejects_without_replay_admission():
     with pytest.raises(ValueError):
         integration.validate_for_replay(item.experience_id)
     assert len(integration.replay) == 0
+
+
+def test_cognitive_result_adapter_keeps_task_identity():
+    cognition = _import_module("06_COGNITION.contracts")
+    evidence = cognition.EvidenceItem(
+        evidence_id="ev-result", source_kind="memory", source_id="mem-2",
+        source_digest=DIGEST, content="task evidence", score=0.7,
+    )
+    result = cognition.CognitiveResult(
+        task_id="cognitive-task", status=cognition.CognitiveStatus.INSUFFICIENT_EVIDENCE,
+        evidence=(evidence,), plan=(),
+        decision=cognition.CognitiveDecision(
+            cognition.DecisionStatus.ABSTAINED, None, 0.0, "not enough evidence"
+        ),
+    )
+    learning = _import_module("08_LEARNING.integration")
+    adapted = learning.from_cognitive_result(result, domain="reasoning")
+    assert len(adapted) == 1
+    assert adapted[0].task_id == "cognitive-task"
+    assert adapted[0].source_id == "ev-result"
+
+
+def test_memory_search_result_adapter_preserves_source_identity():
+    memory = _import_module("05_MEMORY.contracts")
+    record = memory.MemoryRecord(
+        kind=memory.MemoryKind.SEMANTIC, content={"fact": "known"},
+        source_kind=memory.MemorySourceKind.USER, source_id="source-2",
+        source_digest=DIGEST, created_at=NOW, updated_at=NOW,
+    )
+    result = memory.MemorySearchResult(record=record, score=0.9)
+    learning = _import_module("08_LEARNING.integration")
+    adapted = learning.from_memory_search_results((result,), domain="general", task_id="task-2")
+    assert adapted[0].source_id == record.memory_id
+    assert adapted[0].source_digest == record.source_digest
