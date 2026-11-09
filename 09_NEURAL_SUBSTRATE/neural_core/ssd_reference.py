@@ -168,9 +168,7 @@ def ssd_minimal_discrete(
     final_state = all_states[:, -1]
 
     # 4. Convert carried states back to outputs within each chunk.
-    decay_from_chunk_start = torch.exp(cumulative_A).permute(
-        0, 2, 3, 1
-    )
+    decay_from_chunk_start = torch.exp(cumulative_A)
     y_off_diagonal = torch.einsum(
         "bclhn,bchpn,bhcl->bclhp",
         Cc,
