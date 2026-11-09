@@ -16,13 +16,13 @@ def sequential_reference(X, A, B, C, initial):
     state = initial
     outputs = []
     for index in range(length):
+        state = state * torch.exp(A[:, index]).unsqueeze(-1).unsqueeze(-1)
         state = state + torch.einsum(
             "bhp,bhn->bhpn", X[:, index], expanded_B[:, index]
         )
         outputs.append(
             torch.einsum("bhpn,bhn->bhp", state, expanded_C[:, index])
         )
-        state = state * torch.exp(A[:, index]).unsqueeze(-1).unsqueeze(-1)
     return torch.stack(outputs, dim=1), state
 
 
