@@ -45,7 +45,7 @@ core contracts.
 - `replay_mechanism/buffer.py`: bounded deterministic stratified replay over validated records.
 - `learning_evaluation/gates.py`: direction-aware metric policies and regression gates; evaluation identity and dataset digest must remain fixed.
 - `learning_controller/controller.py`: proposal/evaluation/promotion orchestration. It only changes the active artifact descriptor after the evaluator passes.
-- `ada.learning`: stable public facade.
+- `integration.py`: explicit adapters from active Memory records/search results, Cognition evidence/results, and World Model episode windows into candidate Learning records.\n- `ada.learning`: stable public facade.
 
 ## Integration boundaries
 
