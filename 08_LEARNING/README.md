@@ -72,11 +72,19 @@ or any safety policy.
 
 ### Neural Substrate
 
-The core Learning layer does not import neural dependencies. A future training
-adapter can map replay samples to PyTorch/JAX batches, compute loss, write a
-candidate checkpoint and return a content digest. This layer then evaluates
-that candidate. No optimizer step, checkpoint write, source-code mutation or
-deployment is executed by this initial implementation.
+The core Learning contracts remain framework-agnostic. The optional
+`pytorch_adapter.py` imports PyTorch only when explicitly imported and accepts
+an already-constructed model and optimizer. It converts **validated** replay
+records whose payloads contain tokenizer-produced `token_ids` into padded
+causal-LM batches, masks padding from the loss, combines the model's task loss
+with an explicitly weighted scalar auxiliary loss, clips gradients when
+configured, and performs one optimizer step only when `train_step` is called.
+
+The adapter does not tokenize, fetch data, change experience status, save
+checkpoints, evaluate candidates, or promote artifacts. A caller must send a
+candidate artifact through `LearningController` and its held-out
+`RegressionGate` before promotion. JAX remains a future backend; this commit
+does not claim JAX/TPU support.
 
 ## Learning modes and roadmap
 
@@ -141,3 +149,27 @@ generation failures and was not adopted as a source of truth.
 validation, duplicate identity, bounded ledger capacity, replay eligibility,
 stratified sampling, eviction, evaluation identity, metric direction,
 regression rejection, accepted promotion and stale-parent protection.
+
+
+## PyTorch training adapter
+
+Install the optional neural dependency with `pip install -e ".[neural,dev]"`.
+Records must be explicitly validated and contain a sequence of integer
+`token_ids` in their payload. For example:
+
+```python
+import torch
+from ada.learning import PyTorchLearningAdapter, train_replay_step
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+adapter = PyTorchLearningAdapter(
+    model, optimizer, pad_token_id=0, max_seq_len=2048,
+    auxiliary_loss_weight=0.01, gradient_clip_norm=1.0,
+)
+metrics = train_replay_step(replay_buffer, adapter, batch_size=8)
+```
+
+The adapter returns detached scalar metrics and the exact experience IDs
+used. It is a single-process PyTorch step implementation, not a distributed
+trainer or checkpoint registry. Tests are in
+`tests/test_learning_pytorch_adapter.py`.
