@@ -8,8 +8,7 @@ import pytest
 from ada.learning import (
     ExperienceKind, ExperienceStatus, LearningIntegration,
 )
-from  importlib import import_module as _import_module
-from  importlib import import_module as _load
+from importlib import import_module as _import_module
 
 
 DIGEST = "a" * 64
