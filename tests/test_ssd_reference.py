@@ -91,7 +91,7 @@ def test_ssd_rejects_invalid_shapes_and_chunk_lengths():
         ssd_minimal_discrete(X, A, B, C, 3)
     with pytest.raises(ValueError, match="initial_states"):
         ssd_minimal_discrete(
-            X, A, B, C, 4, initial_states=torch.zeros(1, 2, 4, 3)
+            X, A, B, C, 4, initial_states=torch.zeros(1, 2, 4, 2)
         )
     with pytest.raises(ValueError, match="groups"):
         ssd_minimal_discrete(X, A, B.repeat(1, 1, 3, 1), C.repeat(1, 1, 3, 1), 4)
