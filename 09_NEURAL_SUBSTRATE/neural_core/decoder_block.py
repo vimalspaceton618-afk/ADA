@@ -21,7 +21,7 @@ try:
     from torch import Tensor, nn
     from torch.nn import functional as F
     from ada.neural import MoEEnergyMemoryFFN
-from .mamba2_reference import Mamba2ReferenceMixer
+    from .mamba2_reference import Mamba2ReferenceMixer
 except ImportError as exc:  # pragma: no cover - optional neural dependency
     raise ImportError(
         "ADA decoder blocks require PyTorch; install ADA with the neural extra."
