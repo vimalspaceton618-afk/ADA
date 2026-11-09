@@ -28,6 +28,8 @@ def from_memory_record(
     memory_contracts = import_module("05_MEMORY.contracts")
     if not isinstance(memory_record, memory_contracts.MemoryRecord):
         raise TypeError("memory_record must be a 05_MEMORY MemoryRecord")
+    if memory_record.status is not memory_contracts.MemoryStatus.ACTIVE:
+        raise ValueError("only active memory records can enter learning intake")
     return ExperienceRecord(
         kind=kind,
         domain=domain,
