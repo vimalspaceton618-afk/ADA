@@ -123,7 +123,8 @@ def ssd_minimal_discrete(
     # Split time into fixed-size chunks. Use float32 for exponentials and
     # cumulative sums, then cast contraction operands back to input dtype.
     Xc = X.reshape(batch, chunks, block_len, heads, head_dim)
-    Ac = A.float().reshape(batch, chunks, block_len, heads).permute(0, 3, 1, 2)
+    accumulation_dtype = torch.float64 if X.dtype == torch.float64 else torch.float32
+    Ac = A.to(dtype=accumulation_dtype).reshape(batch, chunks, block_len, heads).permute(0, 3, 1, 2)
     Bc = B.repeat_interleave(group_repeats, dim=2).reshape(
         batch, chunks, block_len, heads, state_dim
     )
@@ -132,7 +133,7 @@ def ssd_minimal_discrete(
     )
 
     # 1. Intra-chunk output: lower-triangular SSD matrix.
-    decay = torch.exp(segment_sum(Ac))
+    decay = torch.exp(segment_sum(Ac)).to(dtype=X.dtype)
     y_diagonal = torch.einsum(
         "bclhn,bcshn,bhcls,bcshp->bclhp",
         Cc,
@@ -144,7 +145,7 @@ def ssd_minimal_discrete(
     # 2. Summarize each chunk's input contribution at its final position.
     cumulative_A = torch.cumsum(Ac, dim=-1)
     decay_to_boundary = torch.exp(
-        cumulative_A[..., -1:].float() - cumulative_A.float()
+        cumulative_A[..., -1:] - cumulative_A
     ).permute(0, 2, 3, 1)
     chunk_states = torch.einsum(
         "bclhn,bclhp,bclh->bchpn",
@@ -156,7 +157,7 @@ def ssd_minimal_discrete(
     # 3. Propagate initial and per-chunk states across chunk boundaries.
     boundary_A = cumulative_A[..., -1]
     padded_boundary_A = F.pad(boundary_A, (1, 0))
-    chunk_decay = torch.exp(segment_sum(padded_boundary_A))
+    chunk_decay = torch.exp(segment_sum(padded_boundary_A)).to(dtype=X.dtype)
     states_with_initial = torch.cat(
         [initial_states.unsqueeze(1), chunk_states], dim=1
     )
@@ -167,7 +168,7 @@ def ssd_minimal_discrete(
     final_state = all_states[:, -1]
 
     # 4. Convert carried states back to outputs within each chunk.
-    decay_from_chunk_start = torch.exp(cumulative_A.float()).permute(
+    decay_from_chunk_start = torch.exp(cumulative_A).permute(
         0, 2, 3, 1
     )
     y_off_diagonal = torch.einsum(
