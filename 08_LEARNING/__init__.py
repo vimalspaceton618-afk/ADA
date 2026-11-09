@@ -9,12 +9,14 @@ from .learning_controller.controller import LearningAttempt, LearningController
 from .learning_evaluation.gates import GateResult, MetricPolicy, RegressionGate
 from .integration import LearningIntegration, from_cognitive_evidence, from_cognitive_result, from_episode_window, from_memory_record, from_memory_search_results
 from .replay_mechanism.buffer import ReplayBuffer
+from .pytorch_adapter import PyTorchLearningAdapter, TorchBatch, TrainingStepResult, train_replay_step
 
 __all__ = [
     "SCHEMA_VERSION", "ArtifactStatus", "ExperienceKind", "ExperienceRecord",
     "ExperienceStatus", "LearningArtifact", "LearningDecision", "LearningProposal",
     "MetricSet", "OutcomeKind", "ExperienceLedger", "LearningAttempt",
     "LearningController", "GateResult", "MetricPolicy", "RegressionGate",
+    "PyTorchLearningAdapter", "TorchBatch", "TrainingStepResult", "train_replay_step",
     "ReplayBuffer", "LearningIntegration", "from_memory_record",
     "from_cognitive_evidence", "from_cognitive_result", "from_memory_search_results", "from_episode_window",
 ]
