@@ -158,7 +158,7 @@ class DevelopmentEngine:
                 visiting.add(mid)
                 for dep in self._modules[mid].dependencies: visit(dep)
                 visiting.remove(mid); visited.add(mid)
-                if mid in wanted: out.append(mid)
+                out.append(mid)
             for mid in sorted(wanted): visit(mid)
             return tuple(out)
     def propose(self, proposal):
