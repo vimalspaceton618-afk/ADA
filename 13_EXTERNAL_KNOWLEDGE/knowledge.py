@@ -58,10 +58,13 @@ class VerificationResult:
     status:KnowledgeStatus
     verifier_id:str
     reason:str
+    document_digest:str
     checked_at:datetime=field(default_factory=lambda:datetime.now(timezone.utc))
     def __post_init__(self):
         if self.status not in {KnowledgeStatus.VERIFIED,KnowledgeStatus.REJECTED,KnowledgeStatus.QUARANTINED}: raise ValueError("verification must be terminal")
         _text(self.verifier_id,"verifier_id"); _text(self.reason,"reason")
+        if not isinstance(self.document_digest,str) or len(self.document_digest)!=64 or any(c not in "0123456789abcdef" for c in self.document_digest):
+            raise ValueError("document_digest must be a lowercase SHA-256 digest")
         if not isinstance(self.checked_at,datetime) or self.checked_at.tzinfo is None: raise ValueError("checked_at must be timezone-aware")
 @dataclass(frozen=True,slots=True)
 class KnowledgeChunk:
@@ -92,6 +95,7 @@ class KnowledgeStore:
         with self._lock:
             current=self._documents[document_id]
             if current.status is not KnowledgeStatus.PENDING: raise ValueError("only pending documents can be reviewed")
+            if result.document_digest != current.digest: raise ValueError("verification result is bound to a different document digest")
             updated=KnowledgeDocument(current.source,current.content,current.title,current.document_id,current.metadata,result.status)
             self._documents[document_id]=updated; self._verification[document_id]=result
             return updated
@@ -107,6 +111,13 @@ class KnowledgeStore:
                 if end==len(doc.content): break
                 start=end-overlap
             self._chunks[document_id]=tuple(chunks); return self._chunks[document_id]
+    def get_chunks(self,document_id):
+        """Return stored chunks only while their source document remains verified."""
+        with self._lock:
+            doc=self._documents[document_id]
+            if doc.status is not KnowledgeStatus.VERIFIED:
+                raise PermissionError("only verified documents may expose chunks")
+            return tuple(self._chunks.get(document_id, ()))
     def get(self,document_id):
         with self._lock: return self._documents[document_id]
     def search(self,query,*,limit=10):
