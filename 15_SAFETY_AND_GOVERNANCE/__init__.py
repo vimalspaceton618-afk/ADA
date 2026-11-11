@@ -33,6 +33,11 @@ def digest(value: Any) -> str:
     return hashlib.sha256(_canonical(value)).hexdigest()
 
 
+def _validate_digest(value: str, name: str) -> None:
+    if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+        raise ValueError(f"{name} must be a lowercase SHA-256 digest")
+
+
 class PolicyEffect(str, Enum):
     ALLOW = "allow"
     DENY = "deny"
@@ -357,7 +362,7 @@ class ArtifactPromotionController:
     def register_approved(self, model_id: str, artifact_digest: str):
         if not model_id.strip():
             raise ValueError("model_id is required")
-        _digest(artifact_digest, "artifact_digest")
+        _validate_digest(artifact_digest, "artifact_digest")
         with self._lock:
             if model_id in self._active:
                 raise ValueError("model already has an approved artifact")
@@ -366,7 +371,7 @@ class ArtifactPromotionController:
 
     def promote(self, model_id: str, candidate_digest: str,
                 gate_results: Mapping[str, bool], approver: Principal):
-        _digest(candidate_digest, "candidate_digest")
+        _validate_digest(candidate_digest, "candidate_digest")
         if not isinstance(approver, Principal) or "release_approver" not in approver.roles:
             raise PermissionError("promotion requires a release_approver principal")
         if not isinstance(gate_results, Mapping):
@@ -386,7 +391,7 @@ class ArtifactPromotionController:
             return candidate_digest
 
     def rollback(self, model_id: str, *, expected_current: str):
-        _digest(expected_current, "expected_current")
+        _validate_digest(expected_current, "expected_current")
         with self._lock:
             if self._active.get(model_id) != expected_current:
                 raise RuntimeError("active artifact changed; stale rollback refused")
