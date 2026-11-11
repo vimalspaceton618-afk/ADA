@@ -23,3 +23,36 @@ All APIs in this baseline are standard-library reference implementations.
 No weights, secrets, external systems, containers, cloud infrastructure or
 hardware were operated by these modules. Every production adapter must retain
 the same fail-closed, provenance, compatibility and audit invariants.
+
+## Nested feature package inventory
+
+All 88 feature subdirectories under domains 15-27 now contain importable Python
+packages. The supported import surface is ada.systems, for example
+ada.systems.safety.action_approval, ada.systems.data.processed_datasets,
+ada.systems.training.post_training, and ada.systems.inference.dynamic_routing.
+
+| Domain | Nested packages implemented |
+|---|---|
+| 15 | action approval; audit journal; data classification/redaction; artifact integrity; scoped permissions; policy bundles; fail-closed sandbox adapter; security lockout monitor |
+| 16 | JSONL pipeline; schema quality; dataset version graph; evaluator-only corpus access; token packing; raw provenance; synthetic review; training corpus; validation corpus and split leakage |
+| 17 | atomic checkpoints; continual schedule; distributed training adapter; PyTorch causal step; ADA AdamW and warmup-cosine; four-head MTP loss; causal batch/token budget; optional representation contrastive objective; training health monitor |
+| 18 | position-sorted MoD router; token-budget batching; bias-corrected top-k MoE routing and sparse dispatch; incremental generation adapter; inference telemetry; external-memory read cache; digest-verified model loader |
+| 19 | conversation turn contract; reviewed feedback queue; context-window builder; multimodal payload metadata; consent/expiry user context |
+| 20 | accelerator discovery; cluster snapshot; retry/circuit-breaker; transport envelope/loopback; managed node operations; content-addressed local storage; fencing/version barrier; capability workload distribution |
+| 21 | diagnostics; JSON logging; counters/gauges/histograms; latency percentiles; telemetry exporter; context-local spans |
+| 22 | module compatibility contracts; allowlisted plugin host; protocol envelope; policy-gated public inference API; strict JSON codec |
+| 23 | cloud provider protocol/dry-run; cluster capacity plan; deployment config; hardened container command spec; local runtime adapter; release channel registry |
+| 24 | integration graph runner; Wilson reliability bounds; reproducibility capture; safety probes; concurrent stress helper; domain import smoke checks; unit assertion helpers |
+| 25 | factorial ablation plans; architecture search candidates; immutable experiment result store; falsifiable hypotheses; literature claim catalogue; scaling calculations; publication readiness record |
+| 26 | API index; architecture catalogue; ADR lifecycle; developer guide index; research notebook; subsystem specifications |
+| 27 | atomic local backup/restore; incident workflow; service lifecycle manager; maintenance run registry; guarded system update state machine |
+
+These packages are executable reference implementations and adapter contracts.
+The paper's core architecture remains the 32-layer
+[Mamba2(MoD), Mamba2(MoD), ContinuousMemory, AgentAttn] × 8 design, with
+position-sorted 50% MoD, 16-query/4-KV GQA and 75% head gating, top-6/64
+bias-corrected experts, read-only differentiable memory, and four MTP heads
+using L_main + 0.3 × L_mtp. The four MTP heads and routing components have
+CPU PyTorch tests. This does not claim hardware-scale training, measured
+performance, production GPU kernels, production container isolation, remote
+cluster consensus, or hosted deployment.

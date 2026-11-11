@@ -43,3 +43,8 @@ lifecycles.
 Import these surfaces through ada.systems. They are tested control-plane and
 integration baselines, not proof of trained model capability, production
 isolation, persistent distributed services, or live deployment.
+
+The 15–27 nested feature packages are importable through ada.systems. Their
+current implementation scope, test coverage, and remaining external adapters
+are tracked in
+[26_DOCUMENTATION/REMAINING_SUBSYSTEMS_BASELINE.md](26_DOCUMENTATION/REMAINING_SUBSYSTEMS_BASELINE.md).
