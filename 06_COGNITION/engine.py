@@ -134,6 +134,7 @@ class CognitionEngine:
         return analyze_cognition(result, query, **subsystem_inputs)
 
     def process(self, task: CognitiveTask, *, representations: Iterable = (),
+                additional_evidence: Iterable[EvidenceItem] = (),
                 retrieve_memory: bool = True, namespace: str = "default",
                 memory_limit: int = 20) -> CognitiveResult:
         if not isinstance(task, CognitiveTask):
@@ -147,6 +148,10 @@ class CognitionEngine:
         warnings = []
         for result in tuple(representations):
             evidence.extend(self._representation_evidence(result))
+        supplied_evidence = tuple(additional_evidence)
+        if any(not isinstance(item, EvidenceItem) for item in supplied_evidence):
+            raise TypeError("additional_evidence must contain EvidenceItem values")
+        evidence.extend(supplied_evidence)
 
         query = task.query or task.objective
         if retrieve_memory and self.memory_engine is not None:
@@ -163,6 +168,9 @@ class CognitionEngine:
         # Preserve deterministic evidence ordering and avoid duplicate IDs.
         unique = {}
         for item in evidence:
+            previous = unique.get(item.evidence_id)
+            if previous is not None and previous != item:
+                raise ValueError(f"conflicting evidence identity: {item.evidence_id}")
             unique.setdefault(item.evidence_id, item)
         evidence_tuple = tuple(unique.values())
         plan = tuple(PlanStep(index, step) for index, step in enumerate(task.plan_steps))
