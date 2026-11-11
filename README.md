@@ -26,3 +26,20 @@ Stable Python facades are exposed under `ada.*` where implemented. Optional neur
 - Do not describe ADA as human-level or superintelligent without reproducible evidence.
 
 See `CONTRIBUTING.md` for contribution guidelines.
+
+
+## Infrastructure reference layers (15-27)
+
+The remaining numbered domains now contain executable standard-library
+reference contracts and automated tests: safety policy and human approval;
+dataset manifests and quality gates; training lifecycle and checkpoints;
+model registry and bounded inference adapters; conversation and feedback;
+node scheduling and leases; observability events, metrics and spans; plugin
+allowlists and serialization; deployment release state and rollback; test
+runner aggregation; research protocols and result provenance; documentation
+catalog and evidence-backed ADRs; and incident, backup and maintenance
+lifecycles.
+
+Import these surfaces through ada.systems. They are tested control-plane and
+integration baselines, not proof of trained model capability, production
+isolation, persistent distributed services, or live deployment.
