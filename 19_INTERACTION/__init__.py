@@ -51,7 +51,7 @@ class ConversationStore:
             raise ValueError("conversation_id and content are required")
         with self._lock:
             if turn_id is not None:
-                key = (conversation_id, turn_id)
+                key = (conversation_id, turn_id, role)
                 prior = self._turns.get(key)
                 if prior is not None:
                     if (prior.role, prior.content) != (role, content):
@@ -64,7 +64,7 @@ class ConversationStore:
             item = ConversationMessage(conversation_id, count, role, content, turn_id=turn_id)
             self._messages.setdefault(conversation_id, []).append(item)
             if turn_id is not None:
-                self._turns[(conversation_id, turn_id)] = item
+                self._turns[(conversation_id, turn_id, role)] = item
             return item
 
     def get(self, conversation_id: str):
