@@ -22,14 +22,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: \${{ matrix.python-version }}
+          python-version: ${versionExpr}
           cache: pip
       - name: Install test dependencies
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,yaml]"
       - name: Run test suite
         run: python -m pytest -q
       - name: Compile ADA subsystems
-        run: python -m compileall -q 06_COGNITION 07_WORLD_MODEL 08_LEARNING 09_NEURAL_SUBSTRATE 10_DEVELOPMENT_ENGINE 11_REASONING_AND_PLANNING 12_ACTION_SYSTEM 13_EXTERNAL_KNOWLEDGE 14_EVALUATION ada
+        run: python -m compileall -q 06_COGNITION 07_WORLD_MODEL 08_LEARNING 09_NEURAL_SUBSTRATE 10_DEVELOPMENT_ENGINE 11_REASONING_AND_PLANNING 12_ACTION_SYSTEM 13_EXTERNAL_KNOWLEDGE 14_EVALUATION ada tests
 
   neural-world-model:
     runs-on: ubuntu-latest
