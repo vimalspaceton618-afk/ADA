@@ -139,5 +139,10 @@ class ObservabilityStore:
         with self._lock:
             return tuple(self._spans.values())
 
+    @property
+    def metric_samples(self):
+        with self._lock:
+            return tuple(self._metrics)
+
 
 __all__ = ["EventLevel", "TelemetryEvent", "MetricSample", "Span", "ObservabilityStore"]
