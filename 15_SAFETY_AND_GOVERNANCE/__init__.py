@@ -268,7 +268,7 @@ DEFAULT_ROLE_PERMISSIONS = {
     "reader": frozenset({"artifact.read", "report.read", "telemetry.read"}),
     "researcher": frozenset({"artifact.read", "candidate.create", "sandbox.run"}),
     "evaluator": frozenset({"artifact.read", "evaluation.run", "report.sign"}),
-    "release_approver": frozenset({"artifact.read", "release.approve"}),
+    "release_approver": frozenset({"artifact.read", "release.approve", "action.approve"}),
     "administrator": frozenset({"identity.manage", "policy.manage", "audit.read"}),
 }
 
