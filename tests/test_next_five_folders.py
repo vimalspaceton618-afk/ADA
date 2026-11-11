@@ -129,7 +129,8 @@ def test_knowledge_is_untrusted_until_verified_and_license_is_allowlisted():
     with pytest.raises(PermissionError):
         store.chunk(document.document_id, size=24, overlap=4)
     verified = store.verify(document.document_id, knowledge.VerificationResult(
-        knowledge.KnowledgeStatus.VERIFIED, "reviewer", "publisher and digest checked"))
+        knowledge.KnowledgeStatus.VERIFIED, "reviewer", "publisher and digest checked",
+        document_digest=document.digest))
     assert verified.status is knowledge.KnowledgeStatus.VERIFIED
     chunks = store.chunk(document.document_id, size=24, overlap=4)
     assert len(chunks) > 1
@@ -145,7 +146,9 @@ def test_knowledge_digest_mismatch_and_terminal_state_are_rejected():
     store = knowledge.KnowledgeStore()
     doc = knowledge.KnowledgeDocument(knowledge.SourceRecord("s2", "https://example.org/2", "publisher"), "text body", "Title")
     store.ingest(doc)
-    store.verify(doc.document_id, knowledge.VerificationResult(knowledge.KnowledgeStatus.REJECTED, "reviewer", "not reliable"))
+    store.verify(doc.document_id, knowledge.VerificationResult(
+        knowledge.KnowledgeStatus.REJECTED, "reviewer", "not reliable",
+        document_digest=doc.digest))
     with pytest.raises(PermissionError):
         store.chunk(doc.document_id)
 
