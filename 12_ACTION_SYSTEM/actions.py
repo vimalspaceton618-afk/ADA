@@ -100,7 +100,10 @@ class ToolGateway:
             if spec.requires_approval:
                 valid=(isinstance(approval,ApprovalTicket) and approval.call_id==cid and approval.tool_id==tool_id
                        and approval.principal==principal and approval.argument_digest==ad and bool(approval.approver.strip()))
-                if not valid: return self._record(cid,tool_id,principal,ActionStatus.AWAITING_APPROVAL,ad,error="matching approval ticket required",consume=False)
+                if not valid:
+                    if approval is None:
+                        return self._record(cid,tool_id,principal,ActionStatus.AWAITING_APPROVAL,ad,error="matching approval ticket required",consume=False)
+                    return self._record(cid,tool_id,principal,ActionStatus.DENIED,ad,error="supplied approval ticket does not match this action")
                 if approval.ticket_id in self._used_tickets: return self._record(cid,tool_id,principal,ActionStatus.DENIED,ad,error="approval ticket replay blocked")
                 self._used_tickets.add(approval.ticket_id)
             self._used_calls.add(cid)
