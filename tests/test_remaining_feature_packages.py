@@ -236,7 +236,7 @@ def test_distributed_node_lifecycle_storage_transport_and_fault_tolerance(tmp_pa
     assert not breaker.allow(now=2.0)
     assert breaker.allow(now=4.0)
 
-    envelope = distributed.network_transport.TransportEnvelope.build(
+    envelope = distributed.network_transport.TransportEnvelope.create(
         "ada", "worker", {"task": 1}, idempotency_key="task-1"
     )
     transport = distributed.network_transport.LoopbackTransport()
