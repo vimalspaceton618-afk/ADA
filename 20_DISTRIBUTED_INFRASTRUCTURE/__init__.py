@@ -69,6 +69,19 @@ class NodeRegistry:
                 key=lambda n: n.node_id,
             ))
 
+    def set_enabled(self, node_id: str, enabled: bool):
+        from dataclasses import replace
+        if type(enabled) is not bool:
+            raise TypeError("enabled must be bool")
+        with self._lock:
+            updated = replace(self._nodes[node_id], enabled=enabled)
+            self._nodes[node_id] = updated
+            return updated
+
+    def nodes(self):
+        with self._lock:
+            return tuple(self._nodes[k] for k in sorted(self._nodes))
+
 
 class WorkloadScheduler:
     def __init__(self, registry: NodeRegistry):
