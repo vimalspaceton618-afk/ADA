@@ -59,7 +59,7 @@ def test_observability_trace_context_and_telemetry_export():
 def test_interoperability_contract_plugins_protocol_and_public_inference_api():
     interop = systems.interoperability
     producer = interop.module_contracts.ModuleContract(
-        "producer", "1", {}, {"text": "str"}, frozenset({"emit"}),
+        "producer", "1", {"seed": "str"}, {"text": "str"}, frozenset({"emit"}),
     )
     consumer = interop.module_contracts.ModuleContract(
         "consumer", "1", {"text": "str"}, {"tokens": "array"}, frozenset({"consume"}),
