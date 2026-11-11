@@ -106,8 +106,8 @@ def test_action_gateway_resumes_after_approval_and_prevents_replay():
         gateway.execute("echo", args, principal="agent", call_id="call-1", approval=ticket)
     replay_ticket = gateway.issue_approval(call_id="call-2", tool_id="echo", principal="agent", arguments=args, approver="human")
     gateway.execute("echo", args, principal="agent", call_id="call-2", approval=replay_ticket)
-    with pytest.raises(ValueError):
-        gateway.execute("echo", args, principal="agent", call_id="call-3", approval=replay_ticket)
+    replay = gateway.execute("echo", args, principal="agent", call_id="call-3", approval=replay_ticket)
+    assert replay.status is actions.ActionStatus.DENIED
 
 
 def test_action_gateway_denies_unknown_principal_and_bad_schema():
