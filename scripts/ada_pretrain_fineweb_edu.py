@@ -382,6 +382,7 @@ def main() -> int:
 
     start_time = time.time()
     running_losses: list[float] = []
+    last_validation_loss = initial_val
     for step in range(start_step, args.max_steps):
         batch = next(train_batches).to(device, non_blocking=True)
         lr = learning_rate_at(step, args)
@@ -414,6 +415,7 @@ def main() -> int:
         validation_loss = None
         if should_eval:
             validation_loss = evaluate(model, tokenizer, args, device)
+            last_validation_loss = validation_loss
             row = {
                 "step": completed_step,
                 "tokens_seen": tokens_seen,
@@ -443,9 +445,40 @@ def main() -> int:
             f"peak allocated={torch.cuda.max_memory_allocated(device) / 1024**2:.1f} MiB",
             flush=True,
         )
+    elapsed_total = time.time() - start_time
+    session_tokens = (args.max_steps - start_step) * args.batch_size * args.sequence_length
+    summary = {
+        "status": "COMPLETED",
+        "run_type": "real_data_causal_lm_pretraining",
+        "dataset_id": DATASET_ID,
+        "dataset_config": DATASET_CONFIG,
+        "dataset_revision": DATASET_REVISION,
+        "device": str(device),
+        "gpu_name": torch.cuda.get_device_name(device) if device.type == "cuda" else None,
+        "precision": "float32",
+        "parameters_total": model.parameter_count(),
+        "steps_this_session": args.max_steps - start_step,
+        "target_steps": args.max_steps,
+        "tokens_this_session": session_tokens,
+        "tokens_seen_total": tokens_seen,
+        "elapsed_seconds": round(elapsed_total, 2),
+        "tokens_per_second": round(session_tokens / max(elapsed_total, 1e-9), 2),
+        "validation_loss_before_training": initial_val,
+        "latest_validation_loss": last_validation_loss,
+        "peak_cuda_memory_mib": (
+            round(torch.cuda.max_memory_allocated(device) / 1024**2, 2)
+            if device.type == "cuda" else None
+        ),
+        "checkpoint_dir": str(model_dir),
+        "metrics_file": str(metrics_path),
+    }
+    (output_dir / "run_summary.json").write_text(
+        json.dumps(summary, indent=2) + "\\n", encoding="utf-8"
+    )
+    print(json.dumps(summary, indent=2), flush=True)
     print(
         f"[complete] steps={args.max_steps - start_step} "
-        f"tokens_this_session={(args.max_steps - start_step) * args.batch_size * args.sequence_length:,} "
+        f"tokens_this_session={session_tokens:,} "
         f"total_tokens_seen={tokens_seen:,}",
         flush=True,
     )
