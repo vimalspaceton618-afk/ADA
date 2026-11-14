@@ -17,6 +17,20 @@ The repository contains implemented research components alongside planned domain
 
 Stable Python facades are exposed under `ada.*` where implemented. Optional neural components require the `neural` extra.
 
+## One-click GPU validation
+
+[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vimalspaceton618-afk/ADA/blob/main/notebooks/colab/ADA_GPU_Smoke_Test.ipynb)
+
+Open the notebook, select a GPU runtime, and choose **Runtime → Run all**. It clones the current `main` branch, installs `.[neural]`, then executes:
+
+```bash
+python scripts/ada_gpu_smoke_test.py --device cuda --steps 3 --batch-size 2 --sequence-length 64
+```
+
+The smoke test exercises the integrated causal LM with alternating Mamba-2 reference SSD and causal attention layers, sparse MoE routing, Energy Memory, backward gradients, an AdamW parameter update, and inference. It uses synthetic token IDs and writes a JSON report plus a checkpoint bundle under `artifacts/ada_gpu_smoke_test/`.
+
+A PASS confirms only that the tested configuration executed and updated parameters on the selected device. It is not a convergence, quality, throughput-comparison, or production-kernel benchmark. The Mamba-2 path is a correctness-oriented PyTorch reference, not a fused CUDA/Triton implementation.
+
 ## Research discipline
 
 - Treat architectural capabilities as hypotheses until implemented and evaluated.
