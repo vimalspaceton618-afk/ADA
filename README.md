@@ -17,34 +17,22 @@ The repository contains implemented research components alongside planned domain
 
 Stable Python facades are exposed under `ada.*` where implemented. Optional neural components require the `neural` extra.
 
-## One-click GPU validation
+## Official Colab pretraining notebook
 
-[![Open in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vimalspaceton618-afk/ADA/blob/main/notebooks/colab/ADA_GPU_Smoke_Test.ipynb)
+[![Open ADA Pretraining in Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vimalspaceton618-afk/ADA/blob/main/notebooks/colab/ADA_Pretraining.ipynb)
 
-Open the notebook, select a GPU runtime, and choose **Runtime → Run all**. It clones the current `main` branch, installs `.[neural]`, then executes:
+**Use this one notebook for ADA Colab training:** `notebooks/colab/ADA_Pretraining.ipynb`. It checks the GPU, clones the latest `main` branch, installs the pretraining dependencies, mounts Google Drive, previews real FineWeb-Edu records, launches causal language-model pretraining, plots train/validation loss, and verifies saved checkpoints.
 
-```bash
-python scripts/ada_gpu_smoke_test.py --device cuda --steps 3 --batch-size 2 --sequence-length 64
-```
+The training script streams the English educational `sample-10BT` configuration from `HuggingFaceFW/fineweb-edu`, trains a byte-level BPE tokenizer on training-only documents, and initializes ADA from random weights. It uses a deterministic held-out validation split, next-token cross-entropy plus the MoE load-balancing term, periodic validation, and resumable optimizer/RNG checkpoints.
 
-The smoke test exercises the integrated causal LM with alternating Mamba-2 reference SSD and causal attention layers, sparse MoE routing, Energy Memory, backward gradients, an AdamW parameter update, and inference. It uses synthetic token IDs and writes a JSON report plus a checkpoint bundle under `artifacts/ada_gpu_smoke_test/`.
+The default pilot processes 512,000 next-token targets (500 steps × batch 4 × sequence 256). This is a bounded real-data experiment, not frontier-scale training or evidence of broad model capability. FineWeb-Edu is English-only, not a multilingual or specialist corpus. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply; preserve attribution and review those terms before redistribution. Dataset: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
 
-A PASS confirms only that the tested configuration executed and updated parameters on the selected device. It is not a convergence, quality, throughput-comparison, or production-kernel benchmark. The Mamba-2 path is a correctness-oriented PyTorch reference, not a fused CUDA/Triton implementation.
-
-## Real-data pretraining (Colab)
-
-[![Open ADA FineWeb-Edu pretraining in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/vimalspaceton618-afk/ADA/blob/main/notebooks/colab/ADA_Real_Data_Pretraining_FineWeb_Edu.ipynb)
-
-The first bounded pretraining recipe streams the English educational `sample-10BT` configuration from `HuggingFaceFW/fineweb-edu`, trains a byte-level BPE tokenizer on training-only documents, and trains `ADAForCausalLM` from random initialization. It uses a deterministic held-out validation split, next-token cross-entropy plus the MoE load-balancing term, periodic validation, resumable optimizer/RNG checkpoints, and a run manifest.
-
-Install the optional dependencies and run locally on CUDA:
+Local CUDA execution is also supported:
 
 ```bash
 pip install -e ".[pretraining]"
 python scripts/ada_pretrain_fineweb_edu.py --device cuda --output-dir ./artifacts/ada-fineweb-edu --max-steps 500
 ```
-
-The default pilot processes 512,000 next-token targets (500 steps × batch 4 × sequence 256). This is a real-data pretraining experiment, but not frontier-scale training or evidence of broad model capability. FineWeb-Edu is English educational web text, not a multilingual or specialist corpus. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply; preserve attribution and review those terms before redistribution. Dataset: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
 
 ## Research discipline
 
