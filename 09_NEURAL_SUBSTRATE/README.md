@@ -2,22 +2,16 @@
 
 This directory contains executable neural components. The first implemented expert-system block is the PDF-aligned Energy Memory + sparse MoE FFN.
 
-## GPU execution smoke test
+## Official Colab training entry point
 
-The repository includes a ready-to-run validation harness:
-- Notebook: `notebooks/colab/ADA_GPU_Smoke_Test.ipynb`
-- CLI runner: `scripts/ada_gpu_smoke_test.py`
+The single supported Colab notebook is
+`notebooks/colab/ADA_Pretraining.ipynb`. It runs the real-data pretraining
+script `scripts/ada_pretrain_fineweb_edu.py`, streams FineWeb-Edu records,
+and saves checkpoints and metrics to Google Drive.
 
-The Colab notebook clones the current repository, installs the optional neural dependency, and launches a small FP32 CUDA run. The runner verifies the hybrid Mamba-2 reference SSD + causal attention layout, finite forward outputs/loss, critical gradient paths, an optimizer parameter update, and inference. It writes `artifacts/ada_gpu_smoke_test/report.json` and a checkpoint bundle.
-
-This is deliberately a smoke test with synthetic data. It validates execution mechanics, not learning quality or convergence; its Mamba-2 implementation is a PyTorch reference scan, not a fused production CUDA kernel.
-
-Run locally on a CUDA-enabled environment after installing the repository's neural extra:
-
-```bash
-pip install -e ".[neural]"
-python scripts/ada_gpu_smoke_test.py --device cuda
-```
+The older synthetic GPU validation runner remains available as a developer
+diagnostic script, but it is not a training workflow and has no separate
+Colab notebook. Do not use it to start pretraining.
 
 ## Integrated execution block
 
