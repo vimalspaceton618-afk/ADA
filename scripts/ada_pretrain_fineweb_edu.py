@@ -26,6 +26,7 @@ from ada.neural import ADAConfig, ADAForCausalLM
 DATASET_ID = "HuggingFaceFW/fineweb-edu"
 DATASET_CONFIG = "sample-10BT"
 DATASET_SPLIT = "train"
+DATASET_REVISION = "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9"
 DATASET_LICENSE = "ODC-By 1.0 (dataset declaration); Common Crawl terms also apply"
 DATASET_CARD = "https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu"
 DATASET_PAPER = "https://arxiv.org/abs/2406.17557"
@@ -88,6 +89,7 @@ def make_stream(split: str, seed: int):
         DATASET_ID,
         name=DATASET_CONFIG,
         split=DATASET_SPLIT,
+        revision=DATASET_REVISION,
         streaming=True,
     )
     if split == "train":
@@ -254,6 +256,7 @@ def save_checkpoint(model, optimizer, output_dir: Path, step: int,
         "dataset_id": DATASET_ID,
         "dataset_config": DATASET_CONFIG,
         "dataset_split": DATASET_SPLIT,
+        "dataset_revision": DATASET_REVISION,
         "dataset_license": DATASET_LICENSE,
         "dataset_card": DATASET_CARD,
         "dataset_paper": DATASET_PAPER,
