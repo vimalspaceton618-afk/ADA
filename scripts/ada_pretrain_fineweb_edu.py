@@ -291,6 +291,14 @@ def main() -> int:
     tokenizer_path = args.output_dir / "tokenizer.json"
     metrics_path = args.output_dir / "metrics.jsonl"
 
+    model_dir = args.output_dir / "model"
+    state_path = args.output_dir / "training_state.pt"
+    if not args.resume and (model_dir / "config.json").exists():
+        raise RuntimeError(
+            f"A model checkpoint already exists in {args.output_dir}. "
+            "Set --resume to continue it, or choose a new --output-dir to start fresh."
+        )
+
     tokenizer = train_tokenizer(tokenizer_path, args)
     vocab_size = tokenizer.get_vocab_size()
     if vocab_size < 260:
@@ -318,8 +326,6 @@ def main() -> int:
         mamba2_ngroups=1,
         mamba2_chunk_size=64,
     )
-    model_dir = args.output_dir / "model"
-    state_path = args.output_dir / "training_state.pt"
     if args.resume and (model_dir / "config.json").exists():
         model = ADAForCausalLM.from_pretrained(model_dir, map_location="cpu")
         if model.config != config:
