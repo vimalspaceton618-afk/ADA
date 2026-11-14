@@ -184,6 +184,28 @@ def test_timeout_is_reported_as_distinct_terminal_state() -> None:
     assert "exceeded its deadline" in (snapshot.error or "")
 
 
+def test_retry_backoff_deadline_transitions_task_to_timed_out() -> None:
+    from ada.runtime import RetryPolicy
+
+    runtime = Runtime(retry_policies={
+        "flaky": RetryPolicy(
+            max_attempts=2,
+            base_delay_seconds=0.02,
+            max_delay_seconds=0.02,
+            retryable_exceptions=(ValueError,),
+        )
+    })
+    runtime.register_handler("flaky", lambda payload, context: (_ for _ in ()).throw(ValueError("retry")))
+    runtime.submit(TaskSpec("flaky", task_id="retry-deadline", timeout_seconds=0.001))
+
+    snapshot = runtime.run_next()
+
+    assert snapshot is not None
+    assert snapshot.status is TaskStatus.TIMED_OUT
+    assert "exceeded its deadline" in (snapshot.error or "")
+    assert runtime.get_task("retry-deadline").status is TaskStatus.TIMED_OUT
+
+
 def test_event_bus_is_bounded_immutable_and_isolates_subscriber_errors() -> None:
     bus = InMemoryEventBus(max_history=2)
     received = []
