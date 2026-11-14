@@ -31,6 +31,21 @@ def test_full_causal_lm_forward_and_shifted_loss():
     assert model.lm_head.weight is model.token_embeddings.weight
 
 
+def test_embedding_initialization_is_scaled_for_tied_lm_head():
+    torch.manual_seed(17)
+    model = ADAForCausalLM(tiny_config(pad_token_id=0))
+    token_std = float(model.token_embeddings.weight.detach().std())
+    position_std = float(model.position_embeddings.weight.detach().std())
+    assert 0.015 < token_std < 0.025
+    assert 0.015 < position_std < 0.025
+    assert torch.count_nonzero(model.token_embeddings.weight[0]) == 0
+
+    ids = torch.randint(1, 41, (2, 7))
+    result = model(ids, labels=ids)
+    assert result.loss is not None
+    assert float(result.loss.detach()) < 4.5  # near log(vocab_size), not O(10^2)
+
+
 def test_untied_head_and_parameter_count():
     model = ADAForCausalLM(tiny_config(tie_embeddings=False))
     assert model.lm_head.weight is not model.token_embeddings.weight
