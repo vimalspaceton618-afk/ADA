@@ -142,8 +142,9 @@ def train_tokenizer(output_path: Path, args: argparse.Namespace) -> Tokenizer:
 def packed_blocks(stream, tokenizer: Tokenizer, sequence_length: int,
                   max_document_chars: int) -> Iterator[torch.Tensor]:
     eos_id = tokenizer.token_to_id("<|eos|>")
-    if eos_id is None:
-        raise RuntimeError("tokenizer is missing <|eos|>")
+    bos_id = tokenizer.token_to_id("<|bos|>")
+    if eos_id is None or bos_id is None:
+        raise RuntimeError("tokenizer is missing <|bos|> or <|eos|>")
     buffer: list[int] = []
     block_width = sequence_length + 1
     for row in stream:
@@ -155,6 +156,7 @@ def packed_blocks(stream, tokenizer: Tokenizer, sequence_length: int,
         ids = tokenizer.encode(text).ids
         if not ids:
             continue
+        buffer.append(bos_id)
         buffer.extend(ids)
         buffer.append(eos_id)
         while len(buffer) >= block_width:
