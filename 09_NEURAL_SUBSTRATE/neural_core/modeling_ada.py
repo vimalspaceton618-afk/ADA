@@ -124,6 +124,14 @@ class ADAForCausalLM(nn.Module):
             config.vocab_size, config.dim, padding_idx=config.pad_token_id
         )
         self.position_embeddings = nn.Embedding(config.max_seq_len, config.dim)
+        # GPT-style small embedding scale keeps tied LM-head logits calibrated.
+        # PyTorch's default nn.Embedding initialization has std ~= 1.0, which
+        # produced excessively large initial logits and a pathological loss.
+        nn.init.normal_(self.token_embeddings.weight, mean=0.0, std=0.02)
+        nn.init.normal_(self.position_embeddings.weight, mean=0.0, std=0.02)
+        if config.pad_token_id is not None:
+            with torch.no_grad():
+                self.token_embeddings.weight[config.pad_token_id].zero_()
         self.embedding_dropout = nn.Dropout(config.dropout)
         self.layers = nn.ModuleList([
             ADADecoderBlock(
