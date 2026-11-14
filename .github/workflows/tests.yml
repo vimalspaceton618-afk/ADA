@@ -50,6 +50,6 @@ jobs:
       - name: Run ADA architecture smoke test on CPU
         run: python scripts/ada_gpu_smoke_test.py --device cpu --steps 1 --batch-size 1 --sequence-length 16 --output-dir /tmp/ada-smoke-test-cpu
       - name: Validate Colab notebook JSON
-        run: python -c "import json, pathlib; json.loads(pathlib.Path('notebooks/colab/ADA_GPU_Smoke_Test.ipynb').read_text(encoding='utf-8'))"
+        run: python -c "import json, pathlib; [json.loads(pathlib.Path(p).read_text(encoding='utf-8')) for p in ['notebooks/colab/ADA_GPU_Smoke_Test.ipynb', 'notebooks/colab/ADA_Real_Data_Pretraining_FineWeb_Edu.ipynb']]"
       - name: Compile neural and world-model packages
         run: python -m compileall -q 07_WORLD_MODEL 09_NEURAL_SUBSTRATE ada/world_model ada/neural
