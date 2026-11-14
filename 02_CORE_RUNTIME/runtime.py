@@ -166,7 +166,14 @@ class Runtime:
                 if token.wait(decision.delay_seconds):
                     target, error = TaskStatus.CANCELLED, f"task {task.task_id} cancelled during retry backoff"
                     break
-                context.checkpoint()
+                try:
+                    context.checkpoint()
+                except TaskCancelledError as exc:
+                    target, error = TaskStatus.CANCELLED, str(exc)
+                    break
+                except TaskTimedOutError as exc:
+                    target, error = TaskStatus.TIMED_OUT, str(exc)
+                    break
 
         with self._event_lock:
             with self._lock:
