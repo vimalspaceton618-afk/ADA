@@ -473,7 +473,7 @@ def main() -> int:
         "metrics_file": str(metrics_path),
     }
     (output_dir / "run_summary.json").write_text(
-        json.dumps(summary, indent=2) + "\\n", encoding="utf-8"
+        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(summary, indent=2), flush=True)
     print(
