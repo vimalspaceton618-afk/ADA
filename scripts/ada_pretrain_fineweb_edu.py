@@ -463,7 +463,7 @@ def main() -> int:
         "tokens_seen_total": tokens_seen,
         "elapsed_seconds": round(elapsed_total, 2),
         "tokens_per_second": round(session_tokens / max(elapsed_total, 1e-9), 2),
-        "validation_loss_before_training": initial_val,
+        "validation_loss_at_session_start": initial_val,
         "latest_validation_loss": last_validation_loss,
         "peak_cuda_memory_mib": (
             round(torch.cuda.max_memory_allocated(device) / 1024**2, 2)
