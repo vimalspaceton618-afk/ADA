@@ -22,6 +22,11 @@ from datasets import load_dataset
 from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 
 from ada.neural import ADAConfig, ADAForCausalLM
+from ada.pretraining_resume import (
+    replay_completed_batches,
+    validate_checkpoint_directory,
+    validate_resume_manifest,
+)
 
 DATASET_ID = "HuggingFaceFW/fineweb-edu"
 DATASET_CONFIG = "sample-10BT"
@@ -273,6 +278,11 @@ def save_checkpoint(model, optimizer, output_dir: Path, step: int,
         "sequence_length": args.sequence_length,
         "metrics_file": str(metrics_path),
         "random_seed": args.seed,
+        "max_document_chars": args.max_document_chars,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "warmup_steps": args.warmup_steps,
+        "tokenizer_sha256": hashlib.sha256(tokenizer_path.read_bytes()).hexdigest(),
         "precision": "float32",
         "optimizer": "AdamW",
         "checkpoint_scope": "model weights + optimizer state + RNG states",
@@ -298,11 +308,24 @@ def main() -> int:
 
     model_dir = args.output_dir / "model"
     state_path = args.output_dir / "training_state.pt"
-    if not args.resume and (model_dir / "config.json").exists():
-        raise RuntimeError(
-            f"A model checkpoint already exists in {args.output_dir}. "
-            "Set --resume to continue it, or choose a new --output-dir to start fresh."
+    validate_checkpoint_directory(args.output_dir, resume=args.resume)
+    if args.resume:
+        previous_manifest = json.loads(
+            (args.output_dir / "run_manifest.json").read_text(encoding="utf-8")
         )
+        validate_resume_manifest(previous_manifest, {
+            "dataset_id": DATASET_ID,
+            "dataset_config": DATASET_CONFIG,
+            "dataset_revision": DATASET_REVISION,
+            "batch_size": args.batch_size,
+            "sequence_length": args.sequence_length,
+            "random_seed": args.seed,
+            "max_document_chars": args.max_document_chars,
+            "learning_rate": args.learning_rate,
+            "weight_decay": args.weight_decay,
+            "warmup_steps": args.warmup_steps,
+            "tokenizer_sha256": hashlib.sha256(tokenizer_path.read_bytes()).hexdigest(),
+        })
 
     tokenizer = train_tokenizer(tokenizer_path, args)
     vocab_size = tokenizer.get_vocab_size()
@@ -331,7 +354,7 @@ def main() -> int:
         mamba2_ngroups=1,
         mamba2_chunk_size=64,
     )
-    if args.resume and (model_dir / "config.json").exists():
+    if args.resume:
         model = ADAForCausalLM.from_pretrained(model_dir, map_location="cpu")
         if model.config != config:
             raise RuntimeError("Existing checkpoint config differs from this run's configuration.")
@@ -348,11 +371,17 @@ def main() -> int:
 
     start_step = 0
     tokens_seen = 0
-    if args.resume and state_path.exists():
-        state = torch.load(state_path, map_location="cpu", weights_only=False)
-        optimizer.load_state_dict(state["optimizer"])
+    if args.resume:
+        # Restricted unpickling prevents arbitrary classes/functions in a
+        # checkpoint from being executed. Only load trusted local artifacts.
+        state = torch.load(state_path, map_location="cpu", weights_only=True)
         start_step = int(state["step"])
         tokens_seen = int(state["tokens_seen"])
+        if state.get("seed") != args.seed:
+            raise RuntimeError("Checkpoint seed differs from --seed")
+        if start_step < 0 or tokens_seen != start_step * args.batch_size * args.sequence_length:
+            raise RuntimeError("Checkpoint step/token counters are inconsistent")
+        optimizer.load_state_dict(state["optimizer"])
         torch.set_rng_state(state["torch_rng_state"])
         if device.type == "cuda" and state.get("cuda_rng_state_all") is not None:
             torch.cuda.set_rng_state_all(state["cuda_rng_state_all"])
@@ -364,6 +393,13 @@ def main() -> int:
         return 0
 
     train_batches = iter(infinite_train_batches(tokenizer, args))
+    if start_step:
+        # A fresh generator starts at step zero. Replay precisely the consumed
+        # data prefix before continuing, or resuming duplicates training data.
+        # This costs O(start_step) remote stream reads; the bounded pilot is
+        # intentionally small. Persist a shard-aware loader cursor for scale.
+        print(f"[resume] replaying {start_step:,} consumed batches", flush=True)
+        train_batches = replay_completed_batches(train_batches, start_step)
     model.train()
     initial_val = evaluate(model, tokenizer, args, device)
     print(
