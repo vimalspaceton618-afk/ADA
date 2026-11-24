@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 import random
+import shutil
 import time
 from pathlib import Path
 from typing import Iterator
@@ -22,6 +23,7 @@ from datasets import load_dataset
 from tokenizers import Tokenizer, decoders, models, pre_tokenizers, trainers
 
 from ada.neural import ADAConfig, ADAForCausalLM
+from ada.atomic_checkpoint import commit_checkpoint, resolve_committed_checkpoint
 from ada.pretraining_resume import (
     replay_completed_batches,
     validate_checkpoint_directory,
@@ -244,20 +246,6 @@ def learning_rate_at(step: int, args: argparse.Namespace) -> float:
 def save_checkpoint(model, optimizer, output_dir: Path, step: int,
                     tokens_seen: int, args: argparse.Namespace,
                     tokenizer_path: Path, metrics_path: Path) -> None:
-    model_dir = output_dir / "model"
-    model.save_pretrained(model_dir)
-    torch.save(
-        {
-            "step": step,
-            "tokens_seen": tokens_seen,
-            "optimizer": optimizer.state_dict(),
-            "torch_rng_state": torch.get_rng_state(),
-            "cuda_rng_state_all": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
-            "python_rng_state": random.getstate(),
-            "seed": args.seed,
-        },
-        output_dir / "training_state.pt",
-    )
     manifest = {
         "run_type": "bounded_real_data_causal_lm_pretraining",
         "dataset_id": DATASET_ID,
@@ -285,12 +273,35 @@ def save_checkpoint(model, optimizer, output_dir: Path, step: int,
         "tokenizer_sha256": hashlib.sha256(tokenizer_path.read_bytes()).hexdigest(),
         "precision": "float32",
         "optimizer": "AdamW",
-        "checkpoint_scope": "model weights + optimizer state + RNG states",
+        "checkpoint_scope": "immutable model + tokenizer + optimizer/RNG + manifest; SHA-256 verified",
     }
-    (output_dir / "run_manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+
+    def write_snapshot(stage: Path) -> None:
+        # Stage all artifacts before publishing the latest.json pointer.
+        model.save_pretrained(stage / "model")
+        torch.save(
+            {
+                "step": step,
+                "tokens_seen": tokens_seen,
+                "optimizer": optimizer.state_dict(),
+                "torch_rng_state": torch.get_rng_state(),
+                "cuda_rng_state_all": (
+                    torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+                ),
+                "python_rng_state": random.getstate(),
+                "seed": args.seed,
+            },
+            stage / "training_state.pt",
+        )
+        shutil.copyfile(tokenizer_path, stage / "tokenizer.json")
+        (stage / "run_manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\\n", encoding="utf-8"
+        )
+
+    committed = commit_checkpoint(
+        output_dir, step=step, tokens_seen=tokens_seen, writer=write_snapshot
     )
-    print(f"[checkpoint] step={step} tokens={tokens_seen:,} -> {output_dir}", flush=True)
+    print(f"[checkpoint] step={step} tokens={tokens_seen:,} -> {committed}", flush=True)
 
 
 def main() -> int:
@@ -306,12 +317,20 @@ def main() -> int:
     tokenizer_path = args.output_dir / "tokenizer.json"
     metrics_path = args.output_dir / "metrics.jsonl"
 
-    model_dir = args.output_dir / "model"
-    state_path = args.output_dir / "training_state.pt"
-    validate_checkpoint_directory(args.output_dir, resume=args.resume)
+    # New checkpoints have a complete immutable snapshot and an atomic pointer.
+    # Runs created before this format retain the previous legacy read path.
+    published = resolve_committed_checkpoint(args.output_dir) if args.resume else None
+    if published is None:
+        validate_checkpoint_directory(args.output_dir, resume=args.resume)
+    else:
+        if not tokenizer_path.is_file():
+            raise RuntimeError("Cannot --resume: root tokenizer.json is missing")
+    source_dir = published if published is not None else args.output_dir
+    model_dir = source_dir / "model"
+    state_path = source_dir / "training_state.pt"
     if args.resume:
         previous_manifest = json.loads(
-            (args.output_dir / "run_manifest.json").read_text(encoding="utf-8")
+            (source_dir / "run_manifest.json").read_text(encoding="utf-8")
         )
         validate_resume_manifest(previous_manifest, {
             "dataset_id": DATASET_ID,
@@ -505,7 +524,7 @@ def main() -> int:
             round(torch.cuda.max_memory_allocated(device) / 1024**2, 2)
             if device.type == "cuda" else None
         ),
-        "checkpoint_dir": str(model_dir),
+        "checkpoint_dir": str(resolve_committed_checkpoint(output_dir) / "model"),
         "metrics_file": str(metrics_path),
     }
     (output_dir / "run_summary.json").write_text(
