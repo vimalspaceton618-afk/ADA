@@ -36,7 +36,9 @@ def validate_checkpoint_directory(output_dir: Path, *, resume: bool) -> None:
                 + ", ".join(missing) + "). Restore a complete run or use "
                 "a new output directory."
             )
-    elif any((output_dir / name).exists() for name in RUN_ARTIFACTS):
+    elif (output_dir / "checkpoints").exists() or (output_dir / "run_summary.json").exists() or any(
+        (output_dir / name).exists() for name in RUN_ARTIFACTS
+    ):
         raise RuntimeError(
             "Output directory already contains pretraining artifacts. "
             "Use --resume for a complete checkpoint or select a new --output-dir."
