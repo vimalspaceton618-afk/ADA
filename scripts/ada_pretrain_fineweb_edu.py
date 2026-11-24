@@ -295,7 +295,7 @@ def save_checkpoint(model, optimizer, output_dir: Path, step: int,
         )
         shutil.copyfile(tokenizer_path, stage / "tokenizer.json")
         (stage / "run_manifest.json").write_text(
-            json.dumps(manifest, indent=2) + "\\n", encoding="utf-8"
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
 
     committed = commit_checkpoint(
@@ -314,7 +314,6 @@ def main() -> int:
         torch.backends.cudnn.allow_tf32 = True
     device = torch.device(args.device)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer_path = args.output_dir / "tokenizer.json"
     metrics_path = args.output_dir / "metrics.jsonl"
 
     # New checkpoints have a complete immutable snapshot and an atomic pointer.
@@ -322,10 +321,8 @@ def main() -> int:
     published = resolve_committed_checkpoint(args.output_dir) if args.resume else None
     if published is None:
         validate_checkpoint_directory(args.output_dir, resume=args.resume)
-    else:
-        if not tokenizer_path.is_file():
-            raise RuntimeError("Cannot --resume: root tokenizer.json is missing")
     source_dir = published if published is not None else args.output_dir
+    tokenizer_path = source_dir / "tokenizer.json"
     model_dir = source_dir / "model"
     state_path = source_dir / "training_state.pt"
     if args.resume:
