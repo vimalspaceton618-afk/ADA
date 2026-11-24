@@ -10,10 +10,17 @@ def train_causal_batch(model, optimizer, input_ids, *, grad_clip: float = 1.0, l
     if input_ids.ndim != 2 or input_ids.shape[1] < 2: raise ValueError("input_ids must be [B,T] with T>=2")
     if grad_clip <= 0: raise ValueError("grad_clip must be positive")
     model.train(); optimizer.zero_grad(set_to_none=True)
-    logits = model(input_ids)
-    if isinstance(logits, dict): logits = logits["logits"]
-    if logits.ndim != 3 or logits.shape[:2] != input_ids.shape:
-        raise ValueError("model must return logits shaped [B,T,V]")
+    output = model(input_ids)
+    # ADAForCausalLM returns ADAOutput (a NamedTuple), not a bare tensor.
+    # Accept the standard tensor, dict, and structured-object interfaces.
+    if isinstance(output, dict):
+        logits = output["logits"]
+    elif hasattr(output, "logits"):
+        logits = output.logits
+    else:
+        logits = output
+    if not isinstance(logits, torch.Tensor) or logits.ndim != 3 or logits.shape[:2] != input_ids.shape:
+        raise ValueError("model must return tensor logits shaped [B,T,V]")
     flat_loss = F.cross_entropy(logits[:, :-1].reshape(-1, logits.size(-1)),
                                 input_ids[:, 1:].reshape(-1), reduction="none")
     if loss_mask is not None:
