@@ -25,7 +25,11 @@ Stable Python facades are exposed under `ada.*` where implemented. Optional neur
 
 The training script streams the English educational `sample-10BT` configuration from `HuggingFaceFW/fineweb-edu`, trains a byte-level BPE tokenizer on training-only documents, and initializes ADA from random weights. It uses a deterministic held-out validation split, next-token cross-entropy plus the MoE load-balancing term, periodic validation, and resumable optimizer/RNG checkpoints.
 
-The default pilot processes 512,000 next-token targets (500 steps × batch 4 × sequence 256). This is a bounded real-data experiment, not frontier-scale training or evidence of broad model capability. FineWeb-Edu is English-only, not a multilingual or specialist corpus. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply; preserve attribution and review those terms before redistribution. Dataset: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
+The default pilot processes 512,000 next-token targets (500 steps × batch 4 × sequence 256). This is a bounded real-data experiment, not frontier-scale training or evidence of broad model capability.
+
+**Checkpoint publication:** New pilot runs save versioned directories under `<output-dir>/checkpoints/step-...`, with `latest.json` updated only after file checksums and content are written. On `--resume`, ADA verifies the published snapshot (tokenizer, config, model weights, optimizer/RNG and run manifest) before loading; runs saved by the older legacy layout are still readable. The previous committed snapshot remains the restore point after interrupted writes. This is tested for single-process local filesystems. Google Drive FUSE and distributed/cloud-storage durability remain unverified and are not covered by local tests.
+
+The data-stream resume currently **replays consumed batches from the pinned Hugging Face dataset revision**. This can be expensive for long runs and is only equivalent while the underlying shard order, library behavior, filtering and tokenization are unchanged. Checkpoint-backed sharded data loading remains future work. FineWeb-Edu is English-only, not a multilingual or specialist corpus. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply; preserve attribution and review those terms before redistribution. Dataset: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
 
 Local CUDA execution is also supported:
 
