@@ -36,8 +36,8 @@ class AutoregressiveGenerator:
                 next_logits, state = self.runner.step(current, state)
                 if not isinstance(next_logits, torch.Tensor) or next_logits.ndim != 3:
                     raise ValueError("runner.step must return logits shaped [B,T,V]")
-                if next_logits.shape[:2] != current.shape or next_logits.shape[-1] < 1:
-                    raise ValueError("runner logits shape must match current tokens [B,T,V]")
+                if next_logits.shape[0] != input_ids.shape[0] or next_logits.shape[1] < 1 or next_logits.shape[-1] < 1:
+                    raise ValueError("runner logits must have batch-matched shape [B,T,V]")
                 logits = next_logits[:, -1, :].float() / config.temperature
                 if config.top_k:
                     k = min(config.top_k, logits.size(-1))
