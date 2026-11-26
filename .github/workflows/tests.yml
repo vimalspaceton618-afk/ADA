@@ -51,3 +51,32 @@ jobs:
         run: python -c "import json, pathlib; [json.loads(pathlib.Path(p).read_text(encoding='utf-8')) for p in ['notebooks/colab/ADA_Pretraining.ipynb']]"
       - name: Compile neural and world-model packages
         run: python -m compileall -q 07_WORLD_MODEL 09_NEURAL_SUBSTRATE ada/world_model ada/neural
+
+  curated-pretraining:
+    runs-on: ubuntu-latest
+    env:
+      ADA_DATASETS_CHECKOUT: ${{ github.workspace }}/.ada-datasets
+      MKL_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - name: Check out ADA
+        uses: actions/checkout@v4
+      - name: Check out pinned ADA-Datasets producer
+        uses: actions/checkout@v4
+        with:
+          repository: vimalspaceton618-afk/ADA-Datasets
+          ref: ed970d452979eea5decebd88457282f0610b685f
+          path: .ada-datasets
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install CPU PyTorch and release dependencies
+        run: |
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e '.[dev]' -e '.ada-datasets[release]'
+          python -c 'import pyarrow, tokenizers, torch; from ada_datasets.training import TrainingRelease'
+      - name: Verify native training, interrupted resume and held-out evaluation
+        run: python -m pytest -q tests/test_curated_pretraining.py

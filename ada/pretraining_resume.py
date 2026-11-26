@@ -2,8 +2,7 @@
 
 Streaming batches are deterministically reconstructed by replaying the prefix.
 This avoids claiming Hugging Face shuffle-buffer snapshots are exact resumes.
-Replay is O(number of completed batches); large jobs should use a checkpointed,
-shard-aware data loader instead.
+Replay is O(number of completed batches). Curated releases use a saved cursor.
 """
 from __future__ import annotations
 
@@ -53,10 +52,19 @@ def validate_resume_manifest(
     Fields introduced after the original checkpoint format are optional when
     reading historical manifests, but enforced on all newly written runs.
     """
+    mode = expected.get("dataset_mode", "fineweb")
+    if manifest.get("dataset_mode", "fineweb") != mode:
+        raise RuntimeError("Cannot --resume: dataset_mode differs from checkpoint.")
     required = (
         "dataset_id", "dataset_config", "dataset_revision",
         "batch_size", "sequence_length", "random_seed",
     )
+    if mode == "curated":
+        required += (
+            "release_manifest_sha256", "tokenizer_sha256", "model_profile",
+            "max_steps", "max_train_tokens", "targets_per_step", "learning_rate",
+            "weight_decay", "warmup_steps",
+        )
     for name in required:
         if manifest.get(name) != expected[name]:
             raise RuntimeError(
