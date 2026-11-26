@@ -29,7 +29,7 @@ The default pilot processes 512,000 next-token targets (500 steps × batch 4 × 
 
 **Checkpoint publication:** New pilot runs save versioned directories under `<output-dir>/checkpoints/step-...`, with `latest.json` updated only after file checksums and content are written. On `--resume`, ADA verifies the published snapshot (tokenizer, config, model weights, optimizer/RNG and run manifest) before loading; runs saved by the older legacy layout are still readable. The previous committed snapshot remains the restore point after interrupted writes. This is tested for single-process local filesystems. Google Drive FUSE and distributed/cloud-storage durability remain unverified and are not covered by local tests.
 
-The data-stream resume currently **replays consumed batches from the pinned Hugging Face dataset revision**. This can be expensive for long runs and is only equivalent while the underlying shard order, library behavior, filtering and tokenization are unchanged. Checkpoint-backed sharded data loading remains future work. FineWeb-Edu is English-only, not a multilingual or specialist corpus. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply; preserve attribution and review those terms before redistribution. Dataset: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
+FineWeb-Edu resume **replays consumed batches from the pinned Hugging Face dataset revision**. Equivalence depends on the underlying shard order, library behavior, filtering and tokenization. FineWeb-Edu is English-only. Its dataset card declares ODC-By 1.0 and notes that Common Crawl terms also apply. Preserve attribution and review those terms before redistribution. [FineWeb-Edu dataset card](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu)
 
 Local CUDA execution is also supported:
 
@@ -37,6 +37,27 @@ Local CUDA execution is also supported:
 pip install -e ".[pretraining]"
 python scripts/ada_pretrain_fineweb_edu.py --device cuda --output-dir ./artifacts/ada-fineweb-edu --max-steps 500
 ```
+
+## Pretraining on a curated ADA release
+
+Install the `release` extra from an ADA-Datasets checkout and either the CPU or GPU PyTorch dependencies for this repository. Build and verify the training release, register its manifest digest in a private status registry, and run the trainer with the independently recorded digest. [ADA-Datasets](https://github.com/vimalspaceton618-afk/ADA-Datasets)
+
+```bash
+python -m pip install -e '.[neural]' -e '../ADA-Datasets[release]'
+python scripts/ada_pretrain_fineweb_edu.py \
+  --curated-release private/release \
+  --curated-release-sha256 "$RELEASE_MANIFEST_SHA256" \
+  --release-status-registry private/status.jsonl \
+  --output-dir artifacts/ada-curated \
+  --device cpu --model-profile smoke \
+  --max-steps 3 --batch-size 1 --warmup-steps 0
+```
+
+The trainer reads the release tokenizer and sequence length, opens verified Parquet shards, and counts only loss-mask targets. Validation reads an independent split. Checkpoints bind the release, tokenizer, schedule and next Parquet cursor to model and optimizer state. Repeat the same command with `--resume` after an interruption. The saved cursor resumes directly at the next row group and row. The release must remain active in its private registry.
+
+For a fixed-budget run, pass `--max-train-tokens N` for the exact number of cross-entropy targets and keep `--max-steps` as the schedule horizon and step ceiling. For matched experiment arms, pass `--targets-per-step K` with a quota each arm can meet on every step. The last batch can be capped at the remaining token budget. When training completes, add `--resume --evaluate-test` to the same command to evaluate the full held-out test split and write `test_evaluation.json` for that checkpoint.
+
+The `smoke` model profile supports a small CPU integration test on the repository's synthetic fixture. Use the default `pilot` profile for the standard model configuration and keep each experiment's registry and checkpoint directory private.
 
 ## Research discipline
 
